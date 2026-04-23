@@ -1,0 +1,23 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.zheila.shortsremixer
+productName: ShortsRemixer
+files:
+  - filter:
+      - src/**/*
+      - node_modules/**/*
+      - package.json
+win:
+  icon: assets/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ShortsRemixer
+electronVersion: 28.3.3
