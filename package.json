@@ -1,0 +1,67 @@
+{
+  "name": "shorts-remixer",
+  "version": "3.0.0",
+  "description": "쇼츠 리믹서 - 양방향 다국어 번역 + 쇼츠/롱폼 자동 생성",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:trial": "cross-env BUILD_MODE=trial electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable --x64",
+    "build:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-${version}.${ext}",
+    "build:trial": "cross-env BUILD_MODE=trial electron-builder --win --x64 -c.extraMetadata.buildMode=trial -c.productName=ShortsRemixer-Trial -c.artifactName=ShortsRemixer-Trial-Setup-${version}.${ext}",
+    "publish": "electron-builder --win --x64 --publish always",
+    "publish:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-${version}.${ext} --publish always"
+  },
+  "author": "제일라",
+  "license": "MIT",
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "form-data": "^4.0.0",
+    "electron-updater": "^6.1.7"
+  },
+  "build": {
+    "appId": "com.zheila.shortsremixer",
+    "productName": "ShortsRemixer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Zhei-la",
+        "repo": "shorts-remixer-releases",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "publisherName": "제일라"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ShortsRemixer",
+      "differentialPackage": true
+    }
+  }
+}
