@@ -1,0 +1,9 @@
+node_modules/
+dist/
+ffmpeg.exe
+ffprobe.exe
+yt-dlp.exe
+bgm/
+test.mp3
+*.log
+.env
