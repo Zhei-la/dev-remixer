@@ -5,6 +5,24 @@
 <title>ShortsRemixer · 쇼츠 리믹서</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Pretendard:wght@400;500;600;700;800&display=swap');
+
+  /* 🆕 카페24 무료 폰트 (앱에 번들됨) - Electron file:// 경로 */
+  @font-face { font-family: "Cafe24 Danjunghae"; src: local("Cafe24 Danjunghae"), url("../fonts/Cafe24Danjunghae-v2.0.ttf"); }
+  @font-face { font-family: "Cafe24 Dongdong"; src: local("Cafe24 Dongdong"), url("../fonts/Cafe24DongdongRegular.ttf"); }
+  @font-face { font-family: "Cafe24 Dongdong Light"; src: local("Cafe24 Dongdong Light"), url("../fonts/Cafe24DongdongLight.ttf"); }
+  @font-face { font-family: "Cafe24 Moyamoya"; src: local("Cafe24 Moyamoya"), url("../fonts/Cafe24Moyamoya-Face-v1.0.ttf"); }
+  @font-face { font-family: "Cafe24 Ohsquare"; src: local("Cafe24 Ohsquare"), url("../fonts/Cafe24Ohsquare-v2.0.ttf"); }
+  @font-face { font-family: "Cafe24 Ohsquare Air"; src: local("Cafe24 Ohsquare Air"), url("../fonts/Cafe24OhsquareAir-v2.0.ttf"); }
+  @font-face { font-family: "Cafe24 Oneprettynight"; src: local("Cafe24 Oneprettynight"), url("../fonts/Cafe24Oneprettynight-v2.0.ttf"); }
+  @font-face { font-family: "Cafe24 Simplehae"; src: local("Cafe24 Simplehae"), url("../fonts/Cafe24Simplehae-v2.0.ttf"); }
+  @font-face { font-family: "Cafe24 Ssurround"; src: local("Cafe24 Ssurround"), url("../fonts/Cafe24Ssurround-v2.0.ttf"); }
+  @font-face { font-family: "Cafe24 Supermagic"; src: local("Cafe24 Supermagic"), url("../fonts/Cafe24Supermagic-Bold-v1.0.ttf"); }
+  @font-face { font-family: "Cafe24 Supermagic Regular"; src: local("Cafe24 Supermagic Regular"), url("../fonts/Cafe24Supermagic-Regular-v1.0.ttf"); }
+  @font-face { font-family: "Cafe24 Angbanana"; src: local("Cafe24 Angbanana"), url("../fonts/Cafe24Angbanana.ttf"); }
+  @font-face { font-family: "Cafe24 Behappy"; src: local("Cafe24 Behappy"), url("../fonts/Cafe24Behappy.ttf"); }
+  @font-face { font-family: "Cafe24 Decobox"; src: local("Cafe24 Decobox"), url("../fonts/Cafe24Decobox.ttf"); }
+  @font-face { font-family: "Cafe24 PROSlimFit"; src: local("Cafe24 PROSlimFit"), url("../fonts/Cafe24PROSlimFit.ttf"); }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
@@ -49,7 +67,11 @@
     padding: 24px 16px;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
   }
+  .step-nav::-webkit-scrollbar { width: 6px; }
+  .step-nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 
   .logo {
     font-family: 'Gaegu', cursive;
@@ -134,11 +156,7 @@
   .step-item:not(.active):not(.completed) .step-title { color: var(--text-dim); }
 
   .step-desc {
-    font-size: 10px;
-    color: var(--text-dim);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none;
   }
 
   /* 연결선 */
@@ -157,7 +175,7 @@
   }
 
   .step-nav-footer {
-    margin-top: auto;
+    margin-top: 24px;
     padding-top: 16px;
     border-top: 1px solid var(--line);
     font-size: 10px;
@@ -269,6 +287,43 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
   }
 
+  /* 🆕 접기/펴기 카드 (설정 페이지) */
+  .card.collapsible { padding: 0; overflow: hidden; }
+  .card.collapsible > .collapse-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 18px 22px; cursor: pointer;
+    user-select: none; transition: background 0.15s;
+  }
+  .card.collapsible > .collapse-header:hover { background: rgba(249,115,22,0.04); }
+  .card.collapsible > .collapse-header .collapse-title {
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.3px; flex: 1;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card.collapsible > .collapse-header .collapse-arrow {
+    font-size: 12px; color: var(--text-dim); transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .card.collapsible.is-open > .collapse-header .collapse-arrow { transform: rotate(180deg); }
+  .card.collapsible > .collapse-body {
+    display: none; padding: 0 22px 22px 22px;
+    border-top: 1px solid var(--line); padding-top: 18px;
+  }
+  .card.collapsible.is-open > .collapse-body { display: block; }
+  .collapse-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 100px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0;
+  }
+  .collapse-badge.registered {
+    background: rgba(34,197,94,0.12); color: #16a34a;
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+  .collapse-badge.unregistered {
+    background: rgba(148,163,184,0.1); color: #64748b;
+    border: 1px solid rgba(148,163,184,0.25);
+  }
+
   .card-title {
     font-size: 11px;
     font-weight: 700;
@@ -343,12 +398,16 @@
     border-left: 1px solid var(--line);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    min-height: 0;
   }
+  .right-sidebar::-webkit-scrollbar { width: 6px; }
+  .right-sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 
   .sidebar-section {
     padding: 14px 18px;
     border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
   }
 
   .sidebar-section:last-child { border-bottom: none; }
@@ -366,7 +425,7 @@
   }
 
   .job-list {
-    max-height: 180px;
+    max-height: 140px;
     overflow-y: auto;
     padding: 0 18px 18px;
   }
@@ -449,7 +508,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 150px;
+    max-height: 120px;
     overflow-y: auto;
   }
 
@@ -1159,6 +1218,7 @@
       right: 240px;
     }
   }
+
 </style>
 </head>
 <body>
@@ -1231,7 +1291,7 @@
           <div class="step-desc">말투, 후킹, 마무리</div>
         </div>
       </div>
-      <div class="step-item" data-step="5">
+      <div class="step-item" data-step="5" style="display:none;">
         <div class="step-num">5</div>
         <div class="step-info">
           <div class="step-title">템플릿</div>
@@ -1254,34 +1314,36 @@
       </div>
     </div>
 
-    <div class="step-nav-footer">
-      <div id="userInfoBox" style="margin-bottom:10px; padding:10px; background:var(--bg-2); border-radius:8px; display:none;">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <div style="color:var(--accent); font-weight:700; flex:1;" id="loggedUsername">-</div>
-          <button id="refreshUserBtn" title="등급 정보 새로고침 (결제 후 반영용)" style="border:none; background:transparent; cursor:pointer; padding:2px 4px; font-size:14px; opacity:0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">🔄</button>
-        </div>
-        <div style="color:var(--text-dim); margin-top:2px;" id="loggedRole">-</div>
-
-        <!-- 🆕 체험판: 총 사용량 표시 -->
-        <div id="trialStatusBox" style="display:none; margin-top:8px; padding:8px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); border-radius:6px;">
-          <div style="color:#f59e0b; font-size:11px; font-weight:700;">🎁 체험판 (무료)</div>
-          <div style="color:#fbbf24; font-size:13px; font-weight:800; margin-top:2px;" id="trialUsageDisplay">0 / 5회</div>
-        </div>
-
-        <!-- 🆕 베이직/프로: 일일 사용량 표시 -->
-        <div id="dailyUsageBox" style="display:none; margin-top:8px; padding:8px; border-radius:6px;">
-          <div id="dailyUsageLabel" style="font-size:11px; font-weight:700;">일일 사용량</div>
-          <div id="dailyUsageDisplay" style="font-size:13px; font-weight:800; margin-top:2px;">0 / 20회</div>
-          <div id="planExpiryDisplay" style="font-size:10px; margin-top:2px; opacity:0.8;"></div>
-        </div>
-
-        <!-- 🆕 무제한/관리자: 안내만 -->
-        <div id="unlimitedStatusBox" style="display:none; margin-top:8px; padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px;">
-          <div style="color:#dc2626; font-size:11px; font-weight:700;" id="unlimitedLabel">♾️ 무제한 사용</div>
-          <div id="unlimitedDetail" style="color:#ef4444; font-size:11px; margin-top:2px; opacity:0.8;">제한 없이 사용 가능</div>
-        </div>
+    <!-- 🆕 유저 정보 박스 - 단계 7 직후, 설정 위에 (대장 요청) -->
+    <div id="userInfoBox" style="margin-top:16px; padding:10px; background:var(--bg-2); border-radius:8px; display:none;">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <div style="color:var(--accent); font-weight:700; font-size:13px; flex:1;" id="loggedUsername">-</div>
+        <button id="refreshUserBtn" title="등급 정보 새로고침 (결제 후 반영용)" style="border:none; background:transparent; cursor:pointer; padding:2px 4px; font-size:13px; opacity:0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">🔄</button>
       </div>
-      <button class="btn btn-ghost" id="logoutBtn" style="width:100%; padding:8px; font-size:11px; margin-bottom:8px; display:none;">🚪 로그아웃</button>
+      <div style="color:var(--text-dim); font-size:11px; margin-top:2px;" id="loggedRole">-</div>
+
+      <!-- 체험판 -->
+      <div id="trialStatusBox" style="display:none; margin-top:8px; padding:8px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); border-radius:6px;">
+        <div style="color:#f59e0b; font-size:11px; font-weight:700;">🎁 체험판 (무료)</div>
+        <div style="color:#fbbf24; font-size:13px; font-weight:800; margin-top:2px;" id="trialUsageDisplay">0 / 5회</div>
+      </div>
+
+      <!-- 베이직/프로 -->
+      <div id="dailyUsageBox" style="display:none; margin-top:8px; padding:8px; border-radius:6px;">
+        <div id="dailyUsageLabel" style="font-size:11px; font-weight:700;">일일 사용량</div>
+        <div id="dailyUsageDisplay" style="font-size:13px; font-weight:800; margin-top:2px;">0 / 20회</div>
+        <div id="planExpiryDisplay" style="font-size:10px; margin-top:2px; opacity:0.8;"></div>
+      </div>
+
+      <!-- 무제한 -->
+      <div id="unlimitedStatusBox" style="display:none; margin-top:8px; padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px;">
+        <div style="color:#dc2626; font-size:11px; font-weight:700;" id="unlimitedLabel">♾️ 무제한 사용</div>
+        <div id="unlimitedDetail" style="color:#ef4444; font-size:11px; margin-top:2px; opacity:0.8;">제한 없이 사용 가능</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="logoutBtn" style="width:100%; padding:8px; font-size:11px; margin-top:8px; display:none;">🚪 로그아웃</button>
+
+    <div class="step-nav-footer">
       <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
         <a href="#" id="settingsLink" style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg-2); border-radius:8px; text-decoration:none; font-size:11px; font-weight:600;">⚙️ 설정</a>
         <a href="#" id="helpLink" style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg-2); border-radius:8px; text-decoration:none; font-size:11px; font-weight:600;">❓ 도움말</a>
@@ -1303,8 +1365,8 @@
       <div class="prog-line" data-line="3"></div>
       <div class="prog-dot" data-step="4"></div>
       <div class="prog-line" data-line="4"></div>
-      <div class="prog-dot" data-step="5"></div>
-      <div class="prog-line" data-line="5"></div>
+      <div class="prog-dot" data-step="5" style="display:none;"></div>
+      <div class="prog-line" data-line="5" style="display:none;"></div>
       <div class="prog-dot" data-step="6"></div>
       <div class="prog-line" data-line="6"></div>
       <div class="prog-dot" data-step="7"></div>
@@ -1440,68 +1502,60 @@
         <div class="card" id="ttsVoiceCard">
           <div class="card-title">🎙️ AI 더빙 목소리</div>
           
-          <!-- Edge TTS (무료) -->
-          <div class="form-row">
-            <label style="font-size:12px; color:var(--text-dim);">Edge TTS (무료)</label>
-            <select class="input" id="voiceSelect"></select>
+          <!-- 🆕 선택된 목소리 표시 (맨 위) -->
+          <div id="selectedVoiceDisplay" style="margin-bottom:12px; padding:12px; background:linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.05)); border:2px solid var(--accent); border-radius:10px;">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">✅ 선택된 목소리 (이 목소리로 영상 만들어짐)</div>
+            <div id="selectedVoiceName" style="font-size:14px; font-weight:800; color:var(--accent);">선희 (Edge TTS)</div>
+          </div>
+          
+          <!-- 🆕 3개 TTS 선택 안내 -->
+          <div style="margin-bottom:14px; padding:10px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:8px;">
+            <div style="font-size:11px; color:var(--text-dim); line-height:1.7;">
+              💡 <b>아래 3개 중 1개</b>만 선택해서 사용하세요. 라디오 버튼 ⓞ 으로 1개만 선택됩니다.<br>
+              💡 API 키와 목소리 ID 등록은 좌측 사이드바 <b>⚙️ 설정</b> 페이지에서.
+            </div>
+          </div>
+          
+          <!-- 1️⃣ Edge TTS (무료) -->
+          <div class="form-row" style="padding:12px; background:rgba(249,115,22,0.04); border:1px solid rgba(249,115,22,0.2); border-radius:10px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text); font-weight:600; cursor:pointer;">
+              <input type="radio" name="ttsProvider" value="edge" id="ttsProviderEdge" checked style="cursor:pointer; accent-color:var(--accent); transform:scale(1.2);" />
+              1️⃣ Edge TTS (무료) — 추천 ⭐
+            </label>
+            <select class="input" id="voiceSelect" style="margin-top:8px;"></select>
+            <div class="hint">바로 사용 가능. 별도 키 / ID 필요 없음.</div>
+          </div>
 
-            <!-- 🆕 한국어 목소리 추가 -->
-            <div id="addEdgeVoiceBox" style="margin-top:10px; padding:10px 12px; background:rgba(249,115,22,0.05); border:1px dashed rgba(249,115,22,0.35); border-radius:10px;">
-              <div style="font-size:11px; font-weight:600; color:var(--text); margin-bottom:6px;">
-                ➕ 목소리 추가 (한국어 Edge TTS만)
-              </div>
-              <div style="display:flex; gap:6px;">
-                <input class="input" id="addEdgeVoiceName" type="text" placeholder="표시 이름 (예: 지민)" style="flex:1; font-size:12px;" />
-                <input class="input" id="addEdgeVoiceId" type="text" placeholder="Voice ID (예: ko-KR-SunHiNeural)" style="flex:1.6; font-size:12px; font-family:monospace;" />
-                <button class="btn btn-primary" id="addEdgeVoiceSaveBtn" style="padding:8px 14px; font-size:12px; white-space:nowrap;">💾 저장</button>
-              </div>
-              <div id="addEdgeVoiceList" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;"></div>
-              <div style="font-size:10px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
-                💡 Edge TTS는 <code>ko-KR-XxxxNeural</code> 형식의 ID를 사용합니다. 입력 후 위 드롭다운에 자동 추가됩니다.
-              </div>
-            </div>
-          </div>
-          
-          <!-- ElevenLabs (고품질) - 간소화된 UI -->
-          <div id="elevenLabsVoiceSection" style="margin-top:16px; padding:16px; background:linear-gradient(135deg, rgba(249,115,22,0.08), rgba(249,115,22,0.03)); border:1px solid rgba(249,115,22,0.2); border-radius:12px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-              <label style="font-size:13px; color:var(--accent); font-weight:700;">✨ ElevenLabs (프리미엄 음성)</label>
-              <a href="https://elevenlabs.io/voice-library" target="_blank" style="padding:6px 12px; background:var(--accent); color:white; text-decoration:none; border-radius:100px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
-                🔍 목소리 찾기 →
-              </a>
-            </div>
-            
-            <!-- Voice ID 입력 -->
-            <label style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">🔧 Voice ID 입력</label>
-            <div style="display:flex; gap:8px;">
-              <input class="input" type="text" id="customVoiceId" placeholder="Voice ID 붙여넣기 (예: 21m00Tcm4TlvDq8ikWAM)" style="flex:1; font-family:monospace; font-size:12px;" />
-              <button id="saveCustomVoiceBtn" class="btn btn-primary" style="padding:8px 14px; font-size:12px; white-space:nowrap;">💾 저장</button>
-            </div>
-            
-            <div id="savedVoiceIdStatus" style="margin-top:8px; padding:8px 12px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; font-size:11px; color:#16a34a; display:none;">
-              ✅ <strong>저장됨</strong> - 앱 재시작 후에도 유지됩니다
-            </div>
-            
-            <!-- 사용 방법 안내 -->
-            <div style="margin-top:12px; padding:10px 12px; background:rgba(0,0,0,0.03); border-radius:8px; font-size:11px; line-height:1.7; color:var(--text-dim);">
-              <div style="font-weight:600; color:var(--text); margin-bottom:4px;">📋 사용 방법:</div>
-              <div><b>1.</b> 설정에서 ElevenLabs API 키 입력</div>
-              <div><b>2.</b> 위 "🔍 목소리 찾기" 클릭 → 원하는 목소리 선택</div>
-              <div><b>3.</b> Voice ID 복사 → 위에 붙여넣고 <b>💾 저장</b></div>
-              <div><b>4.</b> 이제 해당 목소리로 TTS 생성됩니다!</div>
-            </div>
-            
-            <!-- 호환성용 숨김 요소 (기존 JS 호환) -->
-            <select id="elevenLabsVoiceSelect" style="display:none;">
-              <option value="">-- Edge TTS 사용 --</option>
+          <!-- 2️⃣ 타입캐스트 (한국어 가장 자연스러움) -->
+          <div class="form-row" style="margin-top:10px; padding:12px; background:rgba(255,107,107,0.04); border:1px solid rgba(255,107,107,0.2); border-radius:10px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#ff6b6b; font-weight:600; cursor:pointer;">
+              <input type="radio" name="ttsProvider" value="typecast" id="ttsProviderTypecast" style="cursor:pointer; accent-color:#ff6b6b; transform:scale(1.2);" />
+              2️⃣ 타입캐스트 (한국어 자연스러움) ⭐
+            </label>
+            <select class="input" id="typecastVoiceSelect" style="margin-top:8px;">
+              <option value="">-- 저장된 타입캐스트 음성 없음 (설정에서 추가) --</option>
             </select>
-            <div id="elevenLabsVoiceId" style="display:none;"></div>
-            <button id="copyVoiceIdBtn" style="display:none;"></button>
+            <div style="font-size:11px; color:var(--text-dim); padding:8px; background:rgba(255,107,107,0.06); border-radius:6px; line-height:1.7; margin-top:6px;">
+              💡 <b>설정</b>에서 API 키 + 음성 ID 등록 필요.<br>
+              <a href="https://typecast.ai/developers/api/voices" target="_blank" style="color:#ff6b6b;">typecast.ai/developers/api/voices</a> 에서 음성 찾기 → Voice ID 복사 → 설정에 붙여넣기.
+            </div>
           </div>
-          
-          <!-- 타입캐스트 / 외부 TTS 파일 -->
-          <div style="margin-top:16px; padding:12px; background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.2); border-radius:10px;">
-            <label style="font-size:13px; color:#ff6b6b; font-weight:600;">🎤 타입캐스트 / 외부 TTS 사용</label>
+
+          <!-- 3️⃣ ElevenLabs (해외 음성) -->
+          <div class="form-row" style="margin-top:10px; padding:12px; background:rgba(99,102,241,0.04); border:1px solid rgba(99,102,241,0.2); border-radius:10px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#6366f1; font-weight:600; cursor:pointer;">
+              <input type="radio" name="ttsProvider" value="elevenlabs" id="ttsProviderEleven" style="cursor:pointer; accent-color:#6366f1; transform:scale(1.2);" />
+              3️⃣ ElevenLabs (해외 영어 음성)
+            </label>
+            <div style="font-size:11px; color:var(--text-dim); padding:8px; background:rgba(99,102,241,0.05); border-radius:6px; line-height:1.7; margin-top:6px;">
+              💡 <b>설정</b>에서 API 키 + 음성 ID 등록 필요. 등록한 음성은 위 Edge TTS 드롭다운에서 자동 선택.<br>
+              <a href="https://elevenlabs.io/voice-library" target="_blank" style="color:#6366f1;">elevenlabs.io/voice-library</a> 에서 음성 찾기 → ID 복사 → 설정에 붙여넣기.
+            </div>
+          </div>
+
+          <!-- 4️⃣ 타입캐스트 / 외부 TTS 파일 (mp3 업로드) -->
+          <div style="margin-top:14px; padding:12px; background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.2); border-radius:10px;">
+            <label style="font-size:13px; color:#ff6b6b; font-weight:600;">📁 타입캐스트 / 외부 TTS 파일 직접 업로드</label>
             
             <!-- 사용 방법 안내 -->
             <div style="margin-top:10px; padding:10px; background:rgba(249,115,22,0.2); border-radius:8px; font-size:11px; line-height:1.8;">
@@ -1529,86 +1583,13 @@
             </div>
             
             <div style="margin-top:10px; padding:8px; background:rgba(255,234,0,0.1); border-radius:6px; font-size:10px; color:var(--warning);">
-              ⚠️ TTS 파일을 선택하면 ElevenLabs/Edge TTS 대신 이 음성이 사용됩니다<br>
+              ⚠️ TTS 파일을 선택하면 위 1️⃣2️⃣ 대신 이 음성이 사용됩니다<br>
               💡 대본 길이와 TTS 길이가 맞아야 자막 싱크가 맞아요!
             </div>
           </div>
         </div>
         
-        <!-- BGM 설정 (인물 모드에서는 숨김) -->
-        <div class="card" id="bgmCard">
-          <div class="card-title">🎵 배경음악 (BGM)</div>
-          
-          <!-- 🆕 내 BGM 라이브러리 (파일 저장 후 드롭다운에 표시) -->
-          <div class="form-row">
-            <label style="font-size:12px; font-weight:600;">🎶 내 BGM 선택</label>
-            <select class="input" id="builtinBgmSelect">
-              <option value="">❌ BGM 없음</option>
-              <!-- 저장된 BGM이 JS로 여기에 주입됩니다 -->
-            </select>
-          </div>
-
-          <!-- 미리듣기 버튼 -->
-          <div style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn btn-ghost" id="previewBgmBtn" style="flex:1;">▶️ 미리듣기</button>
-            <button class="btn btn-ghost" id="stopBgmBtn" style="flex:1; display:none;">⏹️ 정지</button>
-          </div>
-          <audio id="bgmPreviewAudio" style="display:none;"></audio>
-
-          <!-- 🆕 BGM 라이브러리에 파일 추가 -->
-          <div style="margin-top:16px; padding:12px; background:rgba(249,115,22,0.05); border:1px dashed rgba(249,115,22,0.35); border-radius:10px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text);">➕ 내 BGM 라이브러리에 추가</label>
-            <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
-              <input class="input" type="text" id="newBgmName" placeholder="표시 이름 (예: 신나는 팝)" style="flex:1; font-size:12px;" />
-              <input type="file" id="newBgmFileInput" accept="audio/*" style="display:none;" />
-              <button class="btn btn-ghost" id="newBgmFileBtn" style="font-size:12px; padding:8px 12px;">📁 파일 선택</button>
-              <button class="btn btn-primary" id="newBgmSaveBtn" style="font-size:12px; padding:8px 14px; white-space:nowrap;" disabled>💾 저장</button>
-            </div>
-            <div id="newBgmSelectedFile" style="margin-top:6px; font-size:11px; color:var(--accent); display:none;"></div>
-            <div id="myBgmLibraryList" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;"></div>
-            <div style="font-size:10px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
-              💡 파일을 추가하면 위 드롭다운에 표시됩니다. 이 PC의 브라우저 저장소에 보관됩니다.
-            </div>
-          </div>
-          
-          <!-- 또는 직접 파일 선택 (1회성) -->
-          <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
-            <label style="font-size:12px; color:var(--text-dim);">📁 또는 이번 작업만 사용할 BGM 파일</label>
-            <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
-              <input type="file" id="bgmFileInput" accept="audio/*" style="display:none;" />
-              <button class="btn btn-ghost" id="selectBgmBtn" style="flex:1; font-size:12px;">📁 내 BGM 파일</button>
-              <button class="btn btn-ghost" id="clearBgmBtn" style="padding:8px 12px; display:none;">❌</button>
-            </div>
-            <div id="bgmFileName" style="margin-top:6px; font-size:12px; color:var(--accent); display:none;"></div>
-          </div>
-          
-          <!-- 볼륨 조절 -->
-          <div class="form-row" style="margin-top:16px;">
-            <label>🔊 BGM 볼륨</label>
-            <div style="display:flex; align-items:center; gap:12px;">
-              <input type="range" id="bgmVolume" min="0" max="50" value="15" style="flex:1;" />
-              <span id="bgmVolumeLabel" style="font-size:13px; color:var(--text); min-width:40px;">15%</span>
-            </div>
-            <div class="hint">TTS 음성 대비 배경음악 볼륨</div>
-          </div>
-          
-          <!-- 무료 BGM 다운로드 안내 -->
-          <div style="margin-top:16px; padding:12px; background:rgba(234,88,12,0.04); border:1px solid rgba(234,88,12,0.1); border-radius:10px;">
-            <div style="font-size:12px; color:var(--accent); font-weight:600; margin-bottom:8px;">🎵 무료 BGM 다운로드</div>
-            <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
-              저작권 걱정 없는 무료 BGM 사이트에서 다운받아 사용하세요!
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              <a href="https://pixabay.com/music/" target="_blank" style="flex:1; min-width:120px; padding:8px; background:var(--bg-2); border-radius:6px; text-align:center; text-decoration:none; font-size:11px; color:var(--text);">
-                🎶 Pixabay Music
-              </a>
-              <a href="https://www.youtube.com/audiolibrary" target="_blank" style="flex:1; min-width:120px; padding:8px; background:var(--bg-2); border-radius:6px; text-align:center; text-decoration:none; font-size:11px; color:var(--text);">
-                🎬 YouTube 오디오 라이브러리
-              </a>
-            </div>
-            <div class="hint" style="margin-top:8px;">💡 다운받은 mp3를 위 "내 BGM 파일" 버튼으로 불러오세요</div>
-          </div>
-        </div>
+        <!-- BGM 설정은 설정 페이지로 이동됨 -->
 
         <!-- 인물 영상 옵션 - 스텝 4로 이동 (숨김) -->
         <div class="card" id="talkingOptions" style="display:none;">
@@ -2218,6 +2199,10 @@
 이거 진짜 대박인데 안 사면 후회함!
 근데 가격이 얼마게? 만원도 안 해!
 한 줄 = 한 자막으로 나옵니다" style="min-height:180px; resize:vertical; font-size:13px; line-height:1.8; margin-top:8px;"></textarea>
+            <!-- 🆕 줄수 표시 - 대본 생성 버튼 위, 왼쪽 정렬 -->
+            <div id="scriptLineCountStep4" style="margin-top:8px; padding:6px 12px; background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.2); border-radius:6px; font-size:12px; color:var(--text); text-align:left; display:none;">
+              📝 현재 대본 <b><span id="scriptLineCountValStep4" style="color:var(--accent); font-weight:800;">0</span>줄</b>
+            </div>
             <div style="display:flex; gap:8px; margin-top:10px;">
               <button class="btn btn-primary" id="regenerateScriptBtnStep4" style="flex:2;">🎬 대본 생성</button>
               <button class="btn btn-ghost" id="copyProductScriptBtn" style="flex:1; font-size:12px;">📋 복사</button>
@@ -2229,11 +2214,11 @@
             
             <!-- GPT 대본 생성기 안내 -->
             <div style="margin-top:12px; padding:10px; background:rgba(16,163,127,0.1); border:1px solid rgba(16,163,127,0.3); border-radius:8px;">
-              <div style="font-size:12px; color:#10a37f; font-weight:600; margin-bottom:6px;">🤖 더 좋은 대본이 필요하다면?</div>
+              <div style="font-size:12px; color:#10a37f; font-weight:600; margin-bottom:6px;">🤖 대본이 조금 어색하다면?</div>
               <div style="font-size:11px; color:var(--text-dim); line-height:1.6;">
                 <b>1.</b> 위에서 대본 자동 생성<br>
                 <b>2.</b> 생성된 대본 복사<br>
-                <b>3.</b> 아래 GPT에 붙여넣기 → 더 좋게 수정!
+                <b>3.</b> 아래 GPT에 붙여넣기 → 예) "10줄 고정해서 대본 수정해줘" 라고 요청하기!
               </div>
               <a href="https://chatgpt.com/g/g-69e44366f3e0819185837a86b2804412-syoceu-rimigseu-daebon-saengseonggi" target="_blank" 
                  style="display:block; margin-top:8px; padding:8px 12px; background:#10a37f; color:white; text-align:center; border-radius:6px; text-decoration:none; font-size:12px; font-weight:600;">
@@ -2241,36 +2226,7 @@
               </a>
             </div>
             
-            <!-- 타입캐스트 TTS -->
-            <div style="margin-top:16px; padding:12px; background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.2); border-radius:10px;">
-              <label style="font-size:13px; color:#ff6b6b; font-weight:600;">🎤 타입캐스트 / 외부 TTS 사용 (선택)</label>
-              
-              <div style="margin-top:10px; padding:10px; background:rgba(249,115,22,0.2); border-radius:8px; font-size:11px; line-height:1.8;">
-                <div style="color:var(--text); font-weight:600; margin-bottom:6px;">📋 사용 방법:</div>
-                <div style="color:var(--text-dim);">
-                  <b>1.</b> 위에서 대본 생성 + 확인<br>
-                  <b>2.</b> 📋 복사 버튼으로 대본 복사<br>
-                  <b>3.</b> <a href="https://typecast.ai" target="_blank" style="color:#ff6b6b;">typecast.ai</a> 접속 → 대본 붙여넣기<br>
-                  <b>4.</b> 원하는 목소리 선택 → mp3 다운로드<br>
-                  <b>5.</b> 아래 버튼으로 mp3 불러오기
-                </div>
-              </div>
-              
-              <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-                <input type="file" id="customTtsFileInputStep4" accept="audio/*" style="display:none;" />
-                <button class="btn btn-ghost" id="selectCustomTtsBtnStep4" style="flex:1; color:#ff6b6b; border-color:rgba(255,107,107,0.3);">
-                  📁 TTS 파일 불러오기 (mp3)
-                </button>
-                <button class="btn btn-ghost" id="clearCustomTtsBtnStep4" style="padding:8px 12px; display:none; color:#ff6b6b;">❌</button>
-              </div>
-              <div id="customTtsFileNameStep4" style="margin-top:6px; font-size:12px; color:#ff6b6b; display:none;"></div>
-              <div id="customTtsPreviewStep4" style="margin-top:8px; display:none;">
-                <audio id="customTtsAudioStep4" controls style="width:100%; height:36px;"></audio>
-              </div>
-              <div class="hint" style="margin-top:8px; color:var(--text-dim);">
-                💡 TTS 파일을 넣으면 AI 더빙 대신 이 음성이 사용됩니다
-              </div>
-            </div>
+            <!-- 타입캐스트 / 외부 TTS는 설정 페이지로 이동됨 -->
           </div>
         </div>
 
@@ -2825,35 +2781,6 @@
         </div>
 
         <div class="card">
-          <div class="card-title">글씨 설정</div>
-          <div class="form-grid">
-            <div>
-              <label>글씨체</label>
-              <select class="input" id="fontFamily">
-                <option value="">자동 (언어별 기본)</option>
-              </select>
-            </div>
-            <div>
-              <label>크기 (<span id="subtitleSizeValue">50</span>px)</label>
-              <input type="range" id="subtitleSizeSlider" min="16" max="100" value="50" style="width:100%;" />
-            </div>
-          </div>
-
-          <div class="form-row" style="margin-top:14px;">
-            <label>애니메이션</label>
-            <select class="input" id="animationSelect">
-              <option value="">프리셋 따름</option>
-              <option value="none">없음</option>
-              <option value="fade">페이드 인/아웃</option>
-              <option value="pop">팝업</option>
-              <option value="slide_up">슬라이드 업</option>
-              <option value="bounce">바운스</option>
-              <option value="typewriter">타이프라이터</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="card">
           <div class="card-title">🎨 색상 커스텀</div>
           <div class="form-grid">
             <div>
@@ -2868,6 +2795,46 @@
           <div style="margin-top:14px;">
             <label>💥 강조 색상 (핵심 문장 자동 강조)</label>
             <div class="color-row" id="highlightColorRow"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">글씨 설정</div>
+          <div class="form-grid">
+            <div>
+              <label>글씨체</label>
+              <select class="input" id="fontFamily">
+                <option value="">자동 (언어별 기본)</option>
+              </select>
+            </div>
+            <div>
+              <label>크기 (<span id="subtitleSizeValue">50</span>px)</label>
+              <input type="range" id="subtitleSizeSlider" min="16" max="100" value="50" style="width:100%;" />
+            </div>
+          </div>
+
+          <!-- 🆕 크기 + 글씨체 저장하기 -->
+          <div style="margin-top:12px; padding:10px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:8px;">
+            <div style="font-size:12px; font-weight:700; color:#6366f1; margin-bottom:8px;">💾 내 자막 설정 저장</div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-ghost" id="saveFontSizeBtn" style="flex:1; min-width:140px; font-size:12px;">💾 크기 + 글씨체 저장</button>
+              <button class="btn btn-ghost" id="resetFontSizeBtn" style="padding:8px 12px; font-size:11px;">↺ 기본값으로</button>
+            </div>
+            <div id="savedFontSizeStatus" style="margin-top:6px; font-size:11px; color:#6366f1; display:none;"></div>
+            <div class="hint" style="margin-top:6px;">💡 크기와 글씨체를 저장하면 다음 작업에도 자동 적용됩니다</div>
+          </div>
+
+          <div class="form-row" style="margin-top:14px;">
+            <label>애니메이션</label>
+            <select class="input" id="animationSelect">
+              <option value="">프리셋 따름</option>
+              <option value="none">없음</option>
+              <option value="fade">페이드 인/아웃</option>
+              <option value="pop">팝업</option>
+              <option value="slide_up">슬라이드 업</option>
+              <option value="bounce">바운스</option>
+              <option value="typewriter">타이프라이터</option>
+            </select>
           </div>
         </div>
 
@@ -3102,12 +3069,39 @@
           </div>
         </div>
 
+        <!-- 🆕 쿠팡 파트너스 상품 검색 -->
+        <div class="card" id="coupangSearchCard" style="margin-top:24px; border:2px solid rgba(245,158,11,0.25); background:linear-gradient(135deg, rgba(245,158,11,0.04) 0%, rgba(249,115,22,0.02) 100%);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div class="card-title" style="margin:0; color:#f59e0b;">🛍️ 쿠팡 파트너스 — 상품 검색 + 링크 발급</div>
+            <span id="coupangSubIdBadge" style="font-size:10px; padding:3px 10px; border-radius:100px; background:rgba(148,163,184,0.1); color:#64748b; border:1px solid rgba(148,163,184,0.25); font-weight:700;">⚪ 본인 ID 미등록</span>
+          </div>
+          
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <input class="input" id="coupangSearchInput" placeholder="제품명 입력 (예: 무선 청소기, 캠핑 의자, 블루투스 이어폰)" style="flex:1;" />
+            <button class="btn btn-primary" id="coupangSearchBtn" style="padding:10px 20px; white-space:nowrap;">🔍 검색</button>
+          </div>
+          
+          <div id="coupangSearchHint" style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.7;">
+            💡 <b>사용 방법:</b> 제품명 입력 → 🔍 검색 → 상품 카드의 <b style="color:#f59e0b;">🛒 보러가기</b>(상품 확인) 또는 <b style="color:#f59e0b;">🔗 링크 만들기</b>(본인 추천 링크 발급) 클릭<br>
+            ⚠️ <b>쿠팡 API 제한:</b> 한 번에 최대 <b style="color:#f59e0b;">10개</b>까지만 표시됩니다 (페이지네이션 미지원). 더 많은 상품을 보려면 키워드를 다양하게 변경해서 검색하세요.<br>
+            🔎 <b>검색 팁:</b> "무선 청소기" / "미니 청소기" / "휴대용 청소기" 등 <b>유사한 단어</b>로 여러 번 검색하면 다양한 상품 확인 가능
+          </div>
+          
+          <div id="coupangSearchStatus" style="display:none; padding:10px; border-radius:8px; font-size:12px; margin-bottom:10px;"></div>
+          
+          <div id="coupangResults" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; max-height:520px; overflow-y:auto;"></div>
+        </div>
+
         <!-- 작업 기록 -->
         <div class="card" id="jobHistoryCard" style="margin-top:24px;">
           <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div class="card-title" style="margin:0;">📋 작업 기록</div>
             <button class="btn btn-ghost" id="clearHistoryBtn" style="font-size:10px; padding:4px 8px;">🗑 전체 삭제</button>
           </div>
+          
+          <!-- 🆕 진행 중인 작업 (실시간) -->
+          <div id="activeJobsList" style="display:none; margin-bottom:14px;"></div>
+          
           <div id="jobHistoryList" style="max-height:300px; overflow-y:auto;">
             <div class="empty-state" style="padding:20px; text-align:center; color:var(--text-dim); font-size:12px;">
               아직 작업 기록이 없습니다.
@@ -3130,7 +3124,6 @@
             <select class="input" id="llmProvider">
               <option value="groq">Groq · Llama 3.3 70B (무료, 빠름) ⭐</option>
               <option value="openai">OpenAI · GPT-4o-mini (유료)</option>
-              <option value="anthropic">Anthropic · Claude 3.5 Haiku (유료)</option>
               <option value="gemini">Google · Gemini 2.0 Flash (무료 한도 큼)</option>
             </select>
           </div>
@@ -3140,10 +3133,18 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-title">🔑 API 키 
-            <button id="toggleApiKeyVisibility" style="float:right; font-size:10px; padding:4px 10px; background:var(--bg-2); border:1px solid var(--line); border-radius:6px; color:var(--text-dim); cursor:pointer;">👁️ 키 보기</button>
+        <div class="card collapsible" data-collapse-key="apikeys">
+          <div class="collapse-header">
+            <div class="collapse-title">
+              🔑 API 키
+              <span id="badgeApiKeys" class="collapse-badge unregistered">⚪ 미등록</span>
+            </div>
+            <span class="collapse-arrow">▼</span>
           </div>
+          <div class="collapse-body">
+            <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+              <button id="toggleApiKeyVisibility" style="font-size:10px; padding:4px 10px; background:var(--bg-2); border:1px solid var(--line); border-radius:6px; color:var(--text-dim); cursor:pointer;">👁️ 키 보기</button>
+            </div>
           <!-- 🆕 API 발급 방법 안내 -->
           <div style="margin-bottom:14px; padding:10px 12px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.18); border-radius:10px; font-size:11px; line-height:1.7;">
             📖 <b>API 키 발급 방법이 궁금하다면?</b> 왼쪽 메뉴의 <b style="color:var(--accent);">📖 사용방법</b>을 눌러 확인하세요.
@@ -3158,10 +3159,6 @@
             <div style="margin-top:6px; font-size:11px; color:var(--text-dim);">
               💡 음성 인식 + AI 대본 생성에 사용. <b>무료</b>로 충분히 사용 가능 (분당 30회, 일 약 14,400회)
             </div>
-          </div>
-          <div class="form-row">
-            <label>Anthropic (Claude) API Key (선택)</label>
-            <input class="input api-key-input" type="password" id="anthropicKey" placeholder="sk-ant-..." />
           </div>
           <div class="form-row">
             <label>Google Gemini API Key (선택)</label>
@@ -3182,45 +3179,301 @@
           <div style="margin-top:10px; padding:10px; background:rgba(249,115,22,0.02); border:1px solid rgba(249,115,22,0.12); border-radius:6px; font-size:11px; color:var(--text-dim);">
             💡 <b>키 변경 후 반드시</b>: 저장 → 앱 재시작 (API 키 캐시 초기화)
           </div>
+          </div><!-- /collapse-body -->
         </div>
 
-        <div class="card">
-          <div class="card-title">🎙️ ElevenLabs TTS (고품질 음성)</div>
+        <!-- 🆕 타입캐스트 API 설정 (위로) -->
+        <div class="card collapsible" data-collapse-key="typecast" id="typecastApiSection">
+          <div class="collapse-header">
+            <div class="collapse-title">
+              🎙️ 타입캐스트 API (한국어 자연스러움)
+              <span id="badgeTypecast" class="collapse-badge unregistered">⚪ 미등록</span>
+            </div>
+            <span class="collapse-arrow">▼</span>
+          </div>
+          <div class="collapse-body">
+          <div class="form-row">
+            <label>타입캐스트 API Token</label>
+            <input class="input" type="password" id="typecastApiKey" placeholder="tc_..." />
+          </div>
+
+          <div style="margin-top:14px; padding:14px; background:linear-gradient(135deg, rgba(255,107,107,0.08), rgba(255,107,107,0.03)); border:1px solid rgba(255,107,107,0.2); border-radius:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+              <label style="font-size:13px; color:#ff6b6b; font-weight:700; margin:0;">✨ 타입캐스트 음성 추가</label>
+              <a href="https://typecast.ai/developers/api/voices" target="_blank" style="padding:6px 12px; background:#ff6b6b; color:white; text-decoration:none; border-radius:100px; font-size:11px; font-weight:700; white-space:nowrap;">🔍 음성 찾기 →</a>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input class="input" type="text" id="typecastVoiceName" placeholder="음성 이름 (예: 선희 - 청년 밝음)" style="flex:1; min-width:160px; font-size:12px;" />
+              <input class="input" type="text" id="typecastVoiceId" placeholder="Voice ID (예: tc_672c...)" style="flex:1.4; min-width:210px; font-family:monospace; font-size:12px;" />
+              <button id="saveTypecastVoiceBtn" class="btn btn-primary" style="padding:8px 14px; font-size:12px; white-space:nowrap; background:#ff6b6b;">💾 저장</button>
+            </div>
+            <div id="savedTypecastVoiceList" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;"></div>
+            <div style="font-size:10px; color:var(--text-dim); margin-top:8px; line-height:1.5;">💡 저장한 음성은 다음 작업부터 더빙 옵션에서 선택할 수 있어요</div>
+          </div>
+
+          <div style="margin-top:12px; padding:12px; background:rgba(255,107,107,0.04); border:1px solid rgba(255,107,107,0.15); border-radius:10px;">
+            <div style="font-size:12px; line-height:1.7; color:var(--text);">
+              <b>💡 타입캐스트란?</b><br>
+              한국어 자연스러운 AI 성우 서비스 (700+ 캐릭터)<br><br>
+              <b>📊 요금제:</b><br>
+              • <b>무료</b>: 5분/월 (개인 비상업용)<br>
+              • <b>베이직</b>: 월 11,900원 (1,000자/일)<br>
+              • <b>프로</b>: 월 24,900원<br><br>
+              <b>🔑 API Token 발급:</b><br>
+              1. <a href="https://typecast.ai/developers/api" target="_blank" style="color:#ff6b6b;">typecast.ai/developers/api</a> 접속<br>
+              2. 로그인 후 API Token 발급<br>
+              3. 위 칸에 붙여넣기
+            </div>
+          </div>
+          </div><!-- /collapse-body -->
+        </div>
+
+        <!-- ElevenLabs (아래로) -->
+        <div class="card collapsible" data-collapse-key="elevenlabs" id="elevenLabsVoiceSection">
+          <div class="collapse-header">
+            <div class="collapse-title">
+              🎙️ ElevenLabs TTS (해외 음성)
+              <span id="badgeElevenLabs" class="collapse-badge unregistered">⚪ 미등록</span>
+            </div>
+            <span class="collapse-arrow">▼</span>
+          </div>
+          <div class="collapse-body">
           <div class="form-row">
             <label>ElevenLabs API Key</label>
             <input class="input" type="password" id="elevenLabsKey" placeholder="xi-..." />
           </div>
+
+          <div style="margin-top:14px; padding:14px; background:linear-gradient(135deg, rgba(249,115,22,0.08), rgba(249,115,22,0.03)); border:1px solid rgba(249,115,22,0.2); border-radius:12px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+              <label style="font-size:13px; color:var(--accent); font-weight:700; margin:0;">✨ ElevenLabs 목소리 추가</label>
+              <a href="https://elevenlabs.io/voice-library" target="_blank" style="padding:6px 12px; background:var(--accent); color:white; text-decoration:none; border-radius:100px; font-size:11px; font-weight:700; white-space:nowrap;">🔍 목소리 찾기 →</a>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input class="input" type="text" id="customVoiceName" placeholder="목소리 이름 (예: 지민 느낌)" style="flex:1; min-width:160px; font-size:12px;" />
+              <input class="input" type="text" id="customVoiceId" placeholder="Voice ID 붙여넣기" style="flex:1.4; min-width:210px; font-family:monospace; font-size:12px;" />
+              <button id="saveCustomVoiceBtn" class="btn btn-primary" style="padding:8px 14px; font-size:12px; white-space:nowrap;">💾 저장</button>
+            </div>
+            <div id="savedVoiceIdStatus" style="margin-top:8px; padding:8px 12px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; font-size:11px; color:#16a34a; display:none;"></div>
+            <div id="savedElevenVoiceList" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;"></div>
+            <div style="font-size:10px; color:var(--text-dim); margin-top:8px; line-height:1.5;">💡 저장한 목소리는 다음 작업부터 바로 사용할 수 있어요</div>
+          </div>
+
+          <select id="elevenLabsVoiceSelect" style="display:none;"><option value="">-- Edge TTS 사용 --</option></select>
+          <div id="elevenLabsVoiceId" style="display:none;"></div>
+          <button id="copyVoiceIdBtn" style="display:none;"></button>
+
           <div style="margin-top:12px; padding:12px; background:rgba(234,88,12,0.04); border:1px solid rgba(234,88,12,0.1); border-radius:10px;">
             <div style="font-size:12px; line-height:1.7; color:var(--text);">
               <b>💡 ElevenLabs란?</b><br>
-              가장 자연스러운 AI 음성 서비스. 감정 표현이 뛰어나고 다양한 목소리 제공.<br><br>
+              자연스러운 AI 음성 서비스예요<br><br>
               <b>📊 요금제:</b><br>
-              • <b>Free</b>: 10,000자/월 (쇼츠 약 10개)<br>
-              • <b>Starter $5</b>: 30,000자/월 (쇼츠 약 30개)<br>
-              • <b>Creator $22</b>: 100,000자/월 (쇼츠 약 100개)<br><br>
+              • <b>Free</b>: 10,000자/월<br>
+              • <b>Starter</b>: 30,000자/월<br>
+              • <b>Creator</b>: 100,000자/월<br><br>
               <b>🔑 API 키 발급:</b><br>
               1. <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent);">elevenlabs.io</a> 가입<br>
               2. Profile → API Keys → Create API Key
             </div>
           </div>
+          </div><!-- /collapse-body -->
         </div>
 
-        <div class="card">
-          <div class="card-title">🎵 BGM 설정</div>
+        <div class="card collapsible" data-collapse-key="bgm" id="bgmCard">
+          <div class="collapse-header">
+            <div class="collapse-title">
+              🎵 BGM 설정
+              <span id="badgeBgm" class="collapse-badge unregistered">⚪ 미등록</span>
+            </div>
+            <span class="collapse-arrow">▼</span>
+          </div>
+          <div class="collapse-body">
           <div class="form-row">
             <label>기본 BGM 볼륨 (%)</label>
             <input class="input" type="number" id="defaultBgmVolume" value="15" min="0" max="100" style="width:80px;" />
-            <span style="font-size:11px; color:var(--text-dim); margin-left:8px;">TTS 음성 대비 배경음악 볼륨</span>
+            <span style="font-size:11px; color:var(--text-dim); margin-left:8px;">기본 추천값</span>
           </div>
-          <div class="hint" style="margin-top:8px;">
-            💡 영상 생성 시 BGM 파일을 선택하면 배경음악이 추가돼요!
+
+          
+          <!-- 🆕 내 BGM 라이브러리 (파일 저장 후 드롭다운에 표시) -->
+          <div class="form-row">
+            <label style="font-size:12px; font-weight:600;">🎶 내 BGM 선택</label>
+            <select class="input" id="builtinBgmSelect">
+              <option value="">❌ BGM 없음</option>
+              <!-- 저장된 BGM이 JS로 여기에 주입됩니다 -->
+            </select>
           </div>
+
+          <!-- 미리듣기 버튼 -->
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button class="btn btn-ghost" id="previewBgmBtn" style="flex:1;">▶️ 미리듣기</button>
+            <button class="btn btn-ghost" id="stopBgmBtn" style="flex:1; display:none;">⏹️ 정지</button>
+          </div>
+          <audio id="bgmPreviewAudio" style="display:none;"></audio>
+
+          <!-- 🆕 BGM 라이브러리에 파일 추가 -->
+          <div style="margin-top:16px; padding:12px; background:rgba(249,115,22,0.05); border:1px dashed rgba(249,115,22,0.35); border-radius:10px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text);">➕ 내 BGM 라이브러리에 추가</label>
+            <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+              <input class="input" type="text" id="newBgmName" placeholder="표시 이름 (예: 신나는 팝)" style="flex:1; font-size:12px;" />
+              <input type="file" id="newBgmFileInput" accept="audio/*" style="display:none;" />
+              <button class="btn btn-ghost" id="newBgmFileBtn" style="font-size:12px; padding:8px 12px;">📁 파일 선택</button>
+              <button class="btn btn-primary" id="newBgmSaveBtn" style="font-size:12px; padding:8px 14px; white-space:nowrap;" disabled>💾 저장</button>
+            </div>
+            <div id="newBgmSelectedFile" style="margin-top:6px; font-size:11px; color:var(--accent); display:none;"></div>
+            <div id="myBgmLibraryList" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;"></div>
+            <div style="font-size:10px; color:var(--text-dim); margin-top:6px; line-height:1.5;">
+              💡 파일을 추가하면 위 드롭다운에 표시됩니다. 이 PC의 브라우저 저장소에 보관됩니다.
+            </div>
+          </div>
+          
+          <!-- 또는 직접 파일 선택 (1회성) -->
+          <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line);">
+            <label style="font-size:12px; color:var(--text-dim);">📁 또는 이번 작업만 사용할 BGM 파일</label>
+            <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+              <input type="file" id="bgmFileInput" accept="audio/*" style="display:none;" />
+              <button class="btn btn-ghost" id="selectBgmBtn" style="flex:1; font-size:12px;">📁 내 BGM 파일</button>
+              <button class="btn btn-ghost" id="clearBgmBtn" style="padding:8px 12px; display:none;">❌</button>
+            </div>
+            <div id="bgmFileName" style="margin-top:6px; font-size:12px; color:var(--accent); display:none;"></div>
+          </div>
+          
+          <!-- 볼륨 조절 -->
+          <div class="form-row" style="margin-top:16px;">
+            <label>🔊 BGM 볼륨</label>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <input type="range" id="bgmVolume" min="0" max="50" value="15" style="flex:1;" />
+              <span id="bgmVolumeLabel" style="font-size:13px; color:var(--text); min-width:40px;">15%</span>
+            </div>
+            <div class="hint">TTS 음성 대비 배경음악 볼륨</div>
+          </div>
+          
+          <!-- 무료 BGM 다운로드 안내 -->
+          <div style="margin-top:16px; padding:12px; background:rgba(234,88,12,0.04); border:1px solid rgba(234,88,12,0.1); border-radius:10px;">
+            <div style="font-size:12px; color:var(--accent); font-weight:600; margin-bottom:8px;">🎵 무료 BGM 다운로드</div>
+            <div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:10px;">
+              저작권 걱정 없는 무료 BGM 사이트에서 다운받아 사용하세요!
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <a href="https://pixabay.com/music/" target="_blank" style="flex:1; min-width:120px; padding:8px; background:var(--bg-2); border-radius:6px; text-align:center; text-decoration:none; font-size:11px; color:var(--text);">
+                🎶 Pixabay Music
+              </a>
+              <a href="https://www.youtube.com/audiolibrary" target="_blank" style="flex:1; min-width:120px; padding:8px; background:var(--bg-2); border-radius:6px; text-align:center; text-decoration:none; font-size:11px; color:var(--text);">
+                🎬 YouTube 오디오 라이브러리
+              </a>
+            </div>
+            <div class="hint" style="margin-top:8px;">💡 다운받은 mp3를 위 "내 BGM 파일" 버튼으로 불러오세요</div>
+          </div>
+
+          </div><!-- /collapse-body -->
         </div>
 
         <!-- 🔒 쿠팡 파트너스 (관리자 lptag가 processor.js 상단에 하드코딩됨. 유저는 설정 X) -->
         <input type="hidden" id="coupangAccessKey" />
         <input type="hidden" id="coupangSecretKey" />
-        <input type="hidden" id="coupangPartnerCode" />
+
+        <!-- 🆕 쿠팡 본인 추천 ID 입력 (사용자용) -->
+        <div class="card collapsible" data-collapse-key="coupang-userid">
+          <div class="collapse-header">
+            <div class="collapse-title">
+              🛍️ 쿠팡 파트너스 본인 추천 ID
+              <span id="badgeCoupangUserId" class="collapse-badge unregistered">⚪ 미등록</span>
+            </div>
+            <span class="collapse-arrow">▼</span>
+          </div>
+          <div class="collapse-body">
+            <div class="form-row">
+              <label>본인 추천 ID (lptag)</label>
+              <input class="input" type="text" id="coupangPartnerCode" placeholder="AF1234567" />
+            </div>
+            
+            <!-- 📌 무엇에 쓰이나요? -->
+            <div style="padding:12px 14px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:10px; font-size:11px; line-height:1.7; color:var(--text-dim); margin-top:8px;">
+              <div style="color:var(--accent); font-weight:700; font-size:12px; margin-bottom:6px;">📌 무엇에 쓰이나요?</div>
+              영상 설명에 박을 <b>본인 쿠팡 추천 링크</b>를 자동 발급할 때 사용해요.<br>
+              여기 ID 등록 후 → 위 화면에서 상품 검색 → 🔗 링크 만들기 → 영상 설명에 붙여넣기
+            </div>
+            
+            <!-- 🔍 추천 ID 어디서 찾나요? -->
+            <div style="padding:14px 16px; background:rgba(59,130,246,0.04); border:1px solid rgba(59,130,246,0.2); border-radius:10px; font-size:12px; line-height:1.8; color:var(--text); margin-top:10px;">
+              <div style="color:#3b82f6; font-weight:800; font-size:13px; margin-bottom:8px;">🔍 추천 ID(lptag) 어디서 찾나요?</div>
+              
+              <div style="margin-bottom:6px;"><b>이미 쿠팡 파트너스 가입한 분:</b></div>
+              <div style="background:white; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:11px; line-height:1.9;">
+                <b style="color:#3b82f6;">1단계.</b> <a href="https://partners.coupang.com" target="_blank" style="color:#f59e0b; font-weight:700;">partners.coupang.com</a> 접속 → 로그인<br>
+                <b style="color:#3b82f6;">2단계.</b> 우측 상단 <b>본인 이메일(아이디)</b> 클릭<br>
+                <b style="color:#3b82f6;">3단계.</b> 드롭다운 메뉴에서 <b>"채널 아이디 관리"</b> 클릭<br>
+                <b style="color:#3b82f6;">4단계.</b> <b>채널 ID</b> 컬럼에서 <span style="background:#fef3c7; padding:2px 6px; border-radius:4px; font-family:monospace; font-weight:700;">AF1234567</span> 형식의 코드 복사 (보통 AF + 숫자 7자리)<br>
+                <b style="color:#3b82f6;">5단계.</b> 위 입력란에 붙여넣기 → 💾 저장
+              </div>
+              
+              <div style="margin-top:10px; padding:8px 12px; background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2); border-radius:6px; font-size:11px; line-height:1.6;">
+                💡 <b>채널 ID가 여러 개면?</b><br>
+                기본 채널 쓰셔도 되고, 영상용으로 <b>채널 추가</b> 버튼 눌러서 따로 만드시면 매출 분리 추적 가능 (한 계정당 최대 10개)
+              </div>
+            </div>
+            
+            <!-- 🆕 아직 가입 안 한 분 -->
+            <div style="padding:14px 16px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.25); border-radius:10px; font-size:12px; line-height:1.8; color:var(--text); margin-top:10px;">
+              <div style="color:#f59e0b; font-weight:800; font-size:13px; margin-bottom:8px;">🆕 아직 가입 안 하신 분</div>
+              
+              <div style="background:white; border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:11px; line-height:1.9;">
+                <b style="color:#f59e0b;">1단계.</b> <a href="https://partners.coupang.com" target="_blank" style="color:#f59e0b; font-weight:700;">partners.coupang.com</a> 접속 → <b>회원가입</b><br>
+                <b style="color:#f59e0b;">2단계.</b> 사업자 유형 선택 (개인 가능, 사업자등록증 X)<br>
+                <b style="color:#f59e0b;">3단계.</b> 활동 채널(유튜브 채널 URL 등) 등록<br>
+                <b style="color:#f59e0b;">4단계.</b> 활동 스크린샷 등록 → 심사 (영업일 1~3일)<br>
+                <b style="color:#f59e0b;">5단계.</b> 가입 후 위 "이미 가입한 분" 1~5단계 따라하기
+              </div>
+              
+              <div style="margin-top:10px; padding:8px 12px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:6px; font-size:11px; line-height:1.6;">
+                ⚠️ <b>최종 승인 조건:</b><br>
+                누적 판매 금액 <b>15만 원</b> 이상 시 자동 최종 승인 → 정산 가능. 그 전엔 가입 후 바로 링크 발급은 가능하지만 첫 정산은 15만원 누적 후
+              </div>
+            </div>
+            
+            <!-- ⚠️ 미등록 시 -->
+            <div style="padding:10px 12px; background:rgba(148,163,184,0.06); border:1px solid rgba(148,163,184,0.2); border-radius:8px; font-size:11px; line-height:1.6; color:var(--text-dim); margin-top:10px;">
+              <b style="color:var(--text);">⚠️ 미등록 상태로 사용하면?</b><br>
+              상품 검색은 가능하지만, 🔗 링크 만들기 누르면 안내창이 떠요. 직접 파트너스 사이트 가서 발급받는 방법을 알려드립니다.
+            </div>
+            
+            <!-- 🔒 관리자 전용: 쿠팡 API 키 입력란 -->
+            <div id="coupangApiKeysAdminSection" style="display:none; margin-top:16px; padding:14px 16px; background:rgba(220,38,38,0.04); border:2px dashed rgba(220,38,38,0.3); border-radius:10px;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                <span style="font-size:14px;">🔒</span>
+                <div style="color:#dc2626; font-weight:800; font-size:13px;">관리자 전용 - 쿠팡 파트너스 API 키</div>
+                <span style="font-size:9px; padding:2px 8px; border-radius:100px; background:rgba(220,38,38,0.1); color:#dc2626; border:1px solid rgba(220,38,38,0.3); font-weight:700;">👑 ADMIN</span>
+              </div>
+              
+              <div style="font-size:11px; color:var(--text-dim); margin-bottom:12px; line-height:1.6;">
+                💡 쿠팡 파트너스 OpenAPI 키 등록 시 <b>실제 상품 검색</b>이 가능해집니다.<br>
+                미등록 시 더미 데이터로 동작합니다.
+              </div>
+              
+              <div class="form-row" style="margin-bottom:8px;">
+                <label style="font-size:11px;">Access Key</label>
+                <input class="input" type="text" id="coupangAccessKeyInput" placeholder="쿠팡 파트너스 Access Key" style="font-family:monospace; font-size:12px;" />
+              </div>
+              
+              <div class="form-row" style="margin-bottom:8px;">
+                <label style="font-size:11px;">Secret Key</label>
+                <input class="input" type="password" id="coupangSecretKeyInput" placeholder="쿠팡 파트너스 Secret Key" style="font-family:monospace; font-size:12px;" />
+              </div>
+              
+              <div style="padding:10px 12px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.25); border-radius:6px; font-size:11px; line-height:1.7; color:var(--text);">
+                <b style="color:#f59e0b;">📍 API 키 발급 방법:</b><br>
+                1. <a href="https://partners.coupang.com" target="_blank" style="color:#f59e0b; font-weight:700;">partners.coupang.com</a> 접속<br>
+                2. 우측 상단 [내 정보] → [OpenAPI 사용 신청]<br>
+                3. 신청 승인 후 → [Access Key] + [Secret Key] 복사<br>
+                4. 위 입력란에 붙여넣기 → 💾 저장
+              </div>
+              
+              <div style="margin-top:10px; padding:8px 12px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:6px; font-size:10px; line-height:1.6; color:#dc2626;">
+                ⚠️ 이 키는 <b>관리자 전용</b>이며, 일반 사용자 화면에서는 보이지 않습니다.<br>
+                키 노출 시 즉시 재발급 권장.
+              </div>
+            </div>
+          </div><!-- /collapse-body -->
+        </div>
 
         <div class="card">
           <div class="card-title">🎬 워터마크</div>
@@ -3375,18 +3628,6 @@
               </div>
             </div>
 
-            <!-- Anthropic -->
-            <div style="padding:12px; background:var(--bg-2); border-radius:10px; margin-bottom:10px;">
-              <div style="font-weight:700; margin-bottom:4px;">🧠 Anthropic · Claude 3.5 Haiku <span style="font-size:10px; color:var(--text-dim); font-weight:500;">(유료, 품질 좋음)</span></div>
-              <div style="color:var(--text-dim); font-size:11px; line-height:1.7;">
-                <b>1.</b> <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent);">console.anthropic.com/settings/keys</a> 접속 → 가입/로그인<br>
-                <b>2.</b> <b>[Create Key]</b> 클릭<br>
-                <b>3.</b> 이름 입력 → 키 복사 (<code>sk-ant-...</code>로 시작)<br>
-                <b>4.</b> 💳 <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--accent);">Billing</a>에서 $5 충전 필요<br>
-                <b>5.</b> 쇼츠 리믹서 <b>[설정] → Anthropic API Key</b>에 붙여넣기!
-              </div>
-            </div>
-
             <!-- Google Gemini -->
             <div style="padding:12px; background:var(--bg-2); border-radius:10px;">
               <div style="font-weight:700; margin-bottom:4px;">✨ Google · Gemini 2.0 Flash <span style="font-size:10px; color:var(--text-dim); font-weight:500;">(무료 한도 큼)</span></div>
@@ -3396,6 +3637,123 @@
                 <b>3.</b> 프로젝트 선택/생성 → 키 복사 (<code>AIza...</code>로 시작)<br>
                 <b>4.</b> 쇼츠 리믹서 <b>[설정] → Google API Key</b>에 붙여넣기!<br>
                 <span style="color:#10b981;">✅ 하루 1500회 무료</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🆕 TTS API 발급 방법 -->
+        <div class="card">
+          <div class="card-title">🎙️ TTS (음성 더빙) API 발급 방법</div>
+          <div style="font-size:12px; line-height:1.8; color:var(--text);">
+            <div style="padding:10px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.15); border-radius:10px; margin-bottom:12px;">
+              💡 <b>선택 사항</b>입니다. <b>Edge TTS (무료)</b>가 기본이라 등록 안 해도 사용 가능.<br>
+              <span style="color:var(--text-dim);">더 자연스러운 음성이 필요하면 아래 등록</span>
+            </div>
+
+            <!-- 타입캐스트 -->
+            <div style="padding:12px; background:var(--bg-2); border-radius:10px; margin-bottom:10px; border:2px solid #ff6b6b;">
+              <div style="font-weight:700; color:#ff6b6b; margin-bottom:4px;">⭐ 타입캐스트 <span style="font-size:10px; color:var(--text-dim); font-weight:500;">(추천 · 한국어 가장 자연스러움)</span></div>
+              <div style="color:var(--text-dim); font-size:11px; line-height:1.7;">
+                <b>1.</b> <a href="https://typecast.ai" target="_blank" style="color:#ff6b6b;">typecast.ai</a> 회원가입<br>
+                <b>2.</b> <a href="https://typecast.ai/developers/api" target="_blank" style="color:#ff6b6b;">typecast.ai/developers/api</a> 접속 → API Token 발급<br>
+                <b>3.</b> 토큰 복사 (<code>tc_...</code>로 시작) → 쇼츠 리믹서 <b>[설정] → 타입캐스트 API Token</b>에 붙여넣기<br>
+                <br>
+                <b>🎤 음성 ID 추가 방법:</b><br>
+                <b>4.</b> <a href="https://typecast.ai/developers/api/voices" target="_blank" style="color:#ff6b6b;">typecast.ai/developers/api/voices</a> 접속<br>
+                <b>5.</b> 마음에 드는 캐릭터 → <b>Voice ID 복사</b> (<code>tc_672c...</code>)<br>
+                <b>6.</b> 설정 페이지 → <b>타입캐스트 음성 추가</b>에서 이름 + Voice ID 붙여넣고 저장<br>
+                <b>7.</b> 더빙옵션 → <b>2️⃣ 타입캐스트</b> 라디오 선택 → 드롭다운에서 음성 선택<br>
+                <span style="color:#10b981;">✅ 무료: 5분/월 · 베이직: 월 11,900원 (1,000자/일)</span>
+              </div>
+            </div>
+
+            <!-- ElevenLabs -->
+            <div style="padding:12px; background:var(--bg-2); border-radius:10px;">
+              <div style="font-weight:700; margin-bottom:4px;">🌐 ElevenLabs <span style="font-size:10px; color:var(--text-dim); font-weight:500;">(영어 음성 좋음)</span></div>
+              <div style="color:var(--text-dim); font-size:11px; line-height:1.7;">
+                <b>1.</b> <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent);">elevenlabs.io</a> 회원가입<br>
+                <b>2.</b> Profile → API Keys → <b>Create API Key</b> → 키 복사 (<code>xi-...</code>로 시작)<br>
+                <b>3.</b> 쇼츠 리믹서 <b>[설정] → ElevenLabs API Key</b>에 붙여넣기<br>
+                <br>
+                <b>🎤 음성 ID 추가 방법:</b><br>
+                <b>4.</b> <a href="https://elevenlabs.io/voice-library" target="_blank" style="color:var(--accent);">elevenlabs.io/voice-library</a> 접속<br>
+                <b>5.</b> 마음에 드는 음성 클릭 → <b>Voice ID 복사</b><br>
+                <b>6.</b> 설정 페이지 → <b>ElevenLabs 목소리 추가</b>에서 이름 + ID 붙여넣고 저장<br>
+                <span style="color:#10b981;">✅ Free: 10,000자/월 · Starter: 30,000자/월</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🆕 쿠팡 파트너스 가입 방법 -->
+        <div class="card">
+          <div class="card-title">🛍️ 쿠팡 파트너스 가입 방법 (제품 영상 수익화)</div>
+          <div style="font-size:12px; line-height:1.8; color:var(--text);">
+            <div style="padding:10px; background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:10px; margin-bottom:12px;">
+              💡 <b>제품 영상 만들 때 쿠팡 링크 박기</b>로 수익 발생.<br>
+              <span style="color:var(--text-dim);">영상 설명에 쿠팡 추천 링크 첨부 → 시청자가 구매 시 수수료</span>
+            </div>
+
+            <div style="padding:12px; background:var(--bg-2); border-radius:10px; margin-bottom:10px; border:2px solid #f59e0b;">
+              <div style="font-weight:700; color:#f59e0b; margin-bottom:6px;">📝 가입 절차</div>
+              <div style="color:var(--text-dim); font-size:11px; line-height:1.8;">
+                <b>1.</b> <a href="https://partners.coupang.com" target="_blank" style="color:#f59e0b;">partners.coupang.com</a> 접속 → <b>회원가입</b><br>
+                <b>2.</b> 본인인증 + 정산 정보 입력 (계좌번호, 주민등록번호 뒷자리 등)<br>
+                <b>3.</b> 활동할 채널 등록 (블로그, 유튜브, 인스타 등)<br>
+                <b>4.</b> 승인 대기 (보통 1~3일)<br>
+                <b>5.</b> 승인 후 → 상품 검색 → <b>제휴 링크 생성</b><br>
+                <b>6.</b> 영상 설명에 짧은 링크 붙여넣기
+              </div>
+            </div>
+
+            <div style="padding:12px; background:rgba(245,158,11,0.05); border-radius:10px; margin-bottom:10px;">
+              <div style="font-weight:700; margin-bottom:4px;">💰 수수료</div>
+              <div style="color:var(--text-dim); font-size:11px; line-height:1.7;">
+                • 보통 상품 가격의 <b>3~10%</b> 수수료<br>
+                • 시청자가 링크 클릭 후 <b>24시간 내 구매</b>한 모든 상품에 적용<br>
+                • 매월 정산 — <b style="color:#f59e0b;">첫 정산은 누적 수익 150,000원 이상</b>부터<br>
+                <span style="margin-left:14px;">그 이후부터는 매월 <b>10,000원 이상</b>이면 정산 (10,000원 미만 시 다음 달로 이월)</span>
+              </div>
+            </div>
+
+            <!-- 🆕 링크 발급 방법 -->
+            <div style="padding:12px; background:var(--bg-2); border-radius:10px; margin-bottom:10px; border:2px solid #f59e0b;">
+              <div style="font-weight:700; color:#f59e0b; margin-bottom:6px;">🔗 제휴 링크 발급 방법</div>
+              <div style="color:var(--text-dim); font-size:11px; line-height:1.8;">
+                <b>1.</b> <a href="https://partners.coupang.com" target="_blank" style="color:#f59e0b;">partners.coupang.com</a> 로그인<br>
+                <b>2.</b> 상단 메뉴 <b>[링크 생성]</b> 클릭<br>
+                <b>3.</b> 검색창에 상품명 또는 쿠팡 상품 URL 붙여넣기<br>
+                <b>4.</b> 원하는 상품 선택 → <b>[링크 생성]</b> 버튼<br>
+                <b>5.</b> <b>짧은 링크 (https://link.coupang.com/...)</b> 복사<br>
+                <b>6.</b> 영상 설명 / 댓글 / 카드뉴스에 붙여넣기<br>
+                <br>
+                <b>📦 자주 쓰는 형식:</b><br>
+                • <b>일반 링크</b>: 짧은 URL<br>
+                • <b>다이내믹 광고</b>: 자동 추천 상품 표시<br>
+                • <b>위젯</b>: 가격 비교 슬라이드 (블로그용)<br>
+                • <b>이미지 배너</b>: 카테고리별 이미지 광고
+              </div>
+            </div>
+
+            <!-- 🆕 자주 묻는 질문 -->
+            <div style="padding:12px; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.2); border-radius:10px; margin-bottom:10px;">
+              <div style="font-weight:700; color:#6366f1; margin-bottom:6px;">❓ 자주 묻는 질문</div>
+              <div style="color:var(--text-dim); font-size:11px; line-height:1.8;">
+                <b>Q. 링크가 너무 길어요</b><br>
+                → <b>[링크 생성]</b> 시 자동으로 짧은 URL 만들어집니다<br>
+                <br>
+                <b>Q. 다른 사람 링크와 어떻게 구분되나요?</b><br>
+                → 링크 안에 자동으로 내 ID가 박힙니다 (자동)<br>
+                <br>
+                <b>Q. 매일 링크 새로 만들어야 하나요?</b><br>
+                → ❌ 한 번 만든 링크 영구 사용. 단, 상품 품절 시 다시 발급
+              </div>
+            </div>
+
+            <div style="padding:10px; background:rgba(255,107,107,0.05); border:1px solid rgba(255,107,107,0.2); border-radius:8px;">
+              <div style="font-size:11px; color:#ff6b6b; line-height:1.7;">
+                ⚠️ <b>주의</b>: 영상 설명에 반드시 <b>"이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다"</b> 문구 명시
               </div>
             </div>
           </div>
@@ -3437,17 +3795,8 @@
 
   <!-- ========== 우측: 사이드바 ========== -->
   <aside class="right-sidebar">
+    <!-- 📁 파일 결과 (맨 위) -->
     <div class="sidebar-section">
-      <div class="sidebar-title">📜 작업 기록</div>
-      <div class="job-list" id="jobList">
-        <div class="empty-state">
-          아직 작업 기록이 없어요.<br>
-          영상을 만들면 여기에 표시됩니다.
-        </div>
-      </div>
-    </div>
-
-    <div class="sidebar-section" style="margin-top:auto;">
       <div class="sidebar-title">📁 파일 결과</div>
       <div class="file-list" id="fileList">
         <div class="empty-state">
@@ -3455,11 +3804,33 @@
         </div>
       </div>
     </div>
-
-    <div class="sidebar-section" style="border-bottom:none;">
-      <button class="btn btn-primary" id="openFolderBtn" style="width:100%; font-size:12px; padding:14px;">
-        📂 결과 폴더 열기
-      </button>
+    
+    <!-- 🛍️ 쿠팡 제품 검색 결과 (검색란 없음) -->
+    <div class="sidebar-section">
+      <div class="sidebar-title" style="color:#f59e0b;">🛍️ 쿠팡 제품 검색 결과</div>
+      
+      <!-- 제품 목록 (3개씩 세로, 큰 화면, 사진 포함) -->
+      <div id="coupangProductList" style="max-height:400px; overflow-y:auto; margin-bottom:12px;">
+        <div class="empty-state" style="font-size:11px; color:var(--text-dim);">
+          메인 화면에서 영상을 만들면<br>관련 제품이 여기에 표시됩니다.
+        </div>
+      </div>
+      
+      <!-- 선택된 상품 (드래그 영역 맨 밑) -->
+      <div id="selectedProductSection" style="display:none;">
+        <div style="font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:8px;">선택된 상품</div>
+        
+        <!-- 제품 미리보기 -->
+        <div id="selectedProductPreview" style="background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:8px; min-height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div style="font-size:11px; color:var(--text-dim);">상품을 선택하세요</div>
+        </div>
+        
+        <!-- 버튼 2개 양옆 -->
+        <div style="display:flex; gap:6px;">
+          <button id="selectedViewBtn" style="flex:1; padding:10px 6px; background:var(--bg-2); color:var(--text); border:1px solid var(--line); border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;">🛒 상품보기</button>
+          <button id="selectedLinkBtn" style="flex:1; padding:10px 6px; background:linear-gradient(135deg,#f59e0b,#f97316); color:white; border:none; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;">🔗 링크만들기</button>
+        </div>
+      </div>
     </div>
   </aside>
 </div>
@@ -3586,8 +3957,7 @@
   let voiceCatalog = {};
   const voiceSel = document.getElementById('voiceSelect');
 
-  // 🆕 무료 노출 화이트리스트 (한국어 Edge TTS)
-  const FREE_VOICE_WHITELIST_KO = ['선희', '인준'];
+  // 🆕 무료 Edge TTS 기본 목소리는 언어별 전체 목록을 노출
 
   // 🆕 사용자가 추가한 커스텀 Edge TTS 목소리 (localStorage)
   function loadCustomEdgeVoices() {
@@ -3612,13 +3982,17 @@
     voiceSel.innerHTML = '';
     let voices = voiceCatalog[lang] || [];
 
-    // 🆕 한국어일 때만 화이트리스트 적용 (선희/인준만 기본 노출)
-    if (lang === 'ko') {
-      voices = voices.filter(v => FREE_VOICE_WHITELIST_KO.includes(v.name));
-      // 사용자가 추가 저장한 커스텀 목소리 병합
-      const custom = loadCustomEdgeVoices();
-      voices = [...voices, ...custom];
-    }
+    // 🆕 기본 무료 목소리 전체 노출 + 사용자가 추가한 목소리 병합
+    const custom = loadCustomEdgeVoices().filter(v => {
+      const id = String(v.id || '').toLowerCase();
+      return !v.lang || v.lang === lang || id.startsWith(String(lang).toLowerCase() + '-');
+    });
+    const seenVoiceIds = new Set();
+    voices = [...voices, ...custom].filter(v => {
+      if (!v || !v.id || seenVoiceIds.has(v.id)) return false;
+      seenVoiceIds.add(v.id);
+      return true;
+    });
 
     if (voices.length === 0) {
       voiceSel.innerHTML = '<option value="">기본 목소리 사용</option>';
@@ -3678,55 +4052,73 @@
   loadVoiceCatalog();
 
   // 🆕 커스텀 Edge TTS 목소리 추가 UI
-  (function setupAddEdgeVoice(){
-    const nameInput = document.getElementById('addEdgeVoiceName');
-    const idInput = document.getElementById('addEdgeVoiceId');
-    const saveBtn = document.getElementById('addEdgeVoiceSaveBtn');
-    const listEl = document.getElementById('addEdgeVoiceList');
+  function setupEdgeVoiceAdder({ nameId, voiceIdId, saveBtnId, listId }) {
+    const nameInput = document.getElementById(nameId);
+    const idInput = document.getElementById(voiceIdId);
+    const saveBtn = document.getElementById(saveBtnId);
     if (!saveBtn) return;
 
-    function renderSavedList() {
-      if (!listEl) return;
+    function renderAllSavedLists() {
+      const renderTargets = ['addEdgeVoiceList', 'settingsEdgeVoiceList'];
       const list = loadCustomEdgeVoices();
-      if (list.length === 0) { listEl.innerHTML = ''; return; }
-      listEl.innerHTML = list.map((v, i) =>
-        `<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; background:var(--bg-2); border:1px solid var(--line); border-radius:100px; font-size:11px;">
-          🔧 ${v.name}
-          <button data-idx="${i}" class="__delEdgeVoice" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px; padding:0 0 0 2px;">×</button>
-        </span>`
-      ).join('');
-      listEl.querySelectorAll('.__delEdgeVoice').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.dataset.idx);
-          const cur = loadCustomEdgeVoices();
-          cur.splice(idx, 1);
-          saveCustomEdgeVoices(cur);
-          renderSavedList();
-          loadVoicesForLang(targetLangSel.value);
+      renderTargets.forEach(targetId => {
+        const el = document.getElementById(targetId);
+        if (!el) return;
+        if (list.length === 0) { el.innerHTML = ''; return; }
+        el.innerHTML = list.map((v, i) =>
+          `<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; background:var(--bg-2); border:1px solid var(--line); border-radius:100px; font-size:11px;">
+            🔧 ${v.name} <span style="opacity:.65; font-family:monospace;">${v.id}</span>
+            <button data-idx="${i}" class="__delEdgeVoice" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px; padding:0 0 0 2px;">×</button>
+          </span>`
+        ).join('');
+        el.querySelectorAll('.__delEdgeVoice').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.idx);
+            const cur = loadCustomEdgeVoices();
+            cur.splice(idx, 1);
+            saveCustomEdgeVoices(cur);
+            renderAllSavedLists();
+            loadVoicesForLang(targetLangSel.value);
+          });
         });
       });
     }
 
     saveBtn.addEventListener('click', () => {
-      const name = (nameInput.value || '').trim();
-      const id = (idInput.value || '').trim();
+      const name = (nameInput?.value || '').trim();
+      const id = (idInput?.value || '').trim();
       if (!name || !id) { alert('표시 이름과 Voice ID를 모두 입력하세요.'); return; }
       if (!/^[a-z]{2}-[A-Z]{2}-.+Neural$/.test(id)) {
-        if (!confirm('⚠️ Edge TTS ID 형식(예: ko-KR-SunHiNeural)이 아닌 것 같습니다.\n그래도 저장할까요?')) return;
+        if (!confirm('⚠️ Edge TTS ID 형식(예: ko-KR-JiMinNeural)이 아닌 것 같습니다.\n그래도 저장할까요?')) return;
       }
       const cur = loadCustomEdgeVoices();
-      // 중복 방지
       if (cur.some(v => v.id === id)) { alert('이미 추가된 Voice ID 입니다.'); return; }
-      cur.push({ id, name, style: '커스텀', recommend: false });
+      const langMatch = id.match(/^([a-z]{2})-/i);
+      const lang = langMatch ? langMatch[1].toLowerCase() : (targetLangSel.value || 'ko');
+      cur.push({ id, name, lang, style: '직접 추가', gender: 'custom', recommend: false });
       saveCustomEdgeVoices(cur);
-      nameInput.value = '';
-      idInput.value = '';
-      renderSavedList();
+      if (nameInput) nameInput.value = '';
+      if (idInput) idInput.value = '';
+      renderAllSavedLists();
       loadVoicesForLang(targetLangSel.value);
+      if (typeof showToast === 'function') showToast('✅ 목소리 저장 완료', 'success');
     });
 
-    renderSavedList();
-  })();
+    renderAllSavedLists();
+  }
+
+  setupEdgeVoiceAdder({
+    nameId: 'addEdgeVoiceName',
+    voiceIdId: 'addEdgeVoiceId',
+    saveBtnId: 'addEdgeVoiceSaveBtn',
+    listId: 'addEdgeVoiceList',
+  });
+  setupEdgeVoiceAdder({
+    nameId: 'settingsEdgeVoiceName',
+    voiceIdId: 'settingsEdgeVoiceId',
+    saveBtnId: 'settingsEdgeVoiceSaveBtn',
+    listId: 'settingsEdgeVoiceList',
+  });
 
   // ===== ElevenLabs 목소리 =====
   const ELEVENLABS_VOICE_IDS = {
@@ -3752,7 +4144,60 @@
   const copyVoiceIdBtn = document.getElementById('copyVoiceIdBtn');
   const elevenLabsVoiceIdDiv = document.getElementById('elevenLabsVoiceId');
   const customVoiceIdInput = document.getElementById('customVoiceId');
+  const customVoiceNameInput = document.getElementById('customVoiceName');
   
+  function loadCustomElevenVoices() {
+    try { return JSON.parse(localStorage.getItem('customElevenLabsVoices') || '[]'); }
+    catch(e) { return []; }
+  }
+  function saveCustomElevenVoices(list) {
+    localStorage.setItem('customElevenLabsVoices', JSON.stringify(list));
+  }
+  function renderCustomElevenVoices() {
+    const listEl = document.getElementById('savedElevenVoiceList');
+    const selectEl = document.getElementById('elevenLabsVoiceSelect');
+    const list = loadCustomElevenVoices();
+    if (selectEl) {
+      selectEl.innerHTML = '<option value="">-- Edge TTS 사용 --</option>';
+      list.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.name;
+        opt.textContent = v.name;
+        selectEl.appendChild(opt);
+      });
+    }
+    if (!listEl) return;
+    if (list.length === 0) { listEl.innerHTML = ''; return; }
+    listEl.innerHTML = list.map((v, i) => `
+      <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 9px; background:var(--bg-2); border:1px solid var(--line); border-radius:100px; font-size:11px;">
+        🎙️ ${v.name}
+        <button class="__useElevenVoice" data-idx="${i}" style="border:none; background:var(--accent); color:white; border-radius:6px; padding:2px 6px; cursor:pointer; font-size:10px;">사용</button>
+        <button class="__delElevenVoice" data-idx="${i}" style="border:none; background:none; color:var(--danger); cursor:pointer; font-size:13px;">×</button>
+      </span>`).join('');
+    listEl.querySelectorAll('.__useElevenVoice').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const v = loadCustomElevenVoices()[Number(btn.dataset.idx)];
+        if (!v) return;
+        if (customVoiceNameInput) customVoiceNameInput.value = v.name;
+        if (customVoiceIdInput) customVoiceIdInput.value = v.voiceId;
+        try {
+          currentConfig.customVoiceName = v.name;
+          currentConfig.customVoiceId = v.voiceId;
+          await window.api.saveConfig(currentConfig);
+        } catch(e) {}
+        if (typeof showToast === 'function') showToast('✅ ElevenLabs 목소리 선택됨', 'success');
+      });
+    });
+    listEl.querySelectorAll('.__delElevenVoice').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cur = loadCustomElevenVoices();
+        cur.splice(Number(btn.dataset.idx), 1);
+        saveCustomElevenVoices(cur);
+        renderCustomElevenVoices();
+      });
+    });
+  }
+
   // 🆕 Voice ID 저장 버튼
   const saveCustomVoiceBtn = document.getElementById('saveCustomVoiceBtn');
   const savedVoiceIdStatus = document.getElementById('savedVoiceIdStatus');
@@ -3760,6 +4205,7 @@
   if (saveCustomVoiceBtn && customVoiceIdInput) {
     saveCustomVoiceBtn.addEventListener('click', async () => {
       const voiceId = customVoiceIdInput.value.trim();
+      const voiceName = (customVoiceNameInput?.value || '').trim() || '내 ElevenLabs 목소리';
       
       if (!voiceId) {
         alert('❌ Voice ID를 입력하세요!');
@@ -3782,6 +4228,7 @@
         try {
           if (typeof currentConfig !== 'undefined' && currentConfig) {
             currentConfig.customVoiceId = voiceId;
+            currentConfig.customVoiceName = voiceName;
             
             // API를 통해 저장
             if (window.api && window.api.saveConfig) {
@@ -3790,15 +4237,19 @@
           } else {
             // currentConfig 아직 없으면 직접 saveConfig 호출
             if (window.api && window.api.saveConfig) {
-              await window.api.saveConfig({ customVoiceId: voiceId });
+              await window.api.saveConfig({ customVoiceId: voiceId, customVoiceName: voiceName });
             }
           }
         } catch (configErr) {
           // currentConfig TDZ 에러 무시 - 직접 저장
           if (window.api && window.api.saveConfig) {
-            await window.api.saveConfig({ customVoiceId: voiceId });
+            await window.api.saveConfig({ customVoiceId: voiceId, customVoiceName: voiceName });
           }
         }
+        const elevenList = loadCustomElevenVoices().filter(v => v.voiceId !== voiceId);
+        elevenList.push({ name: voiceName, voiceId });
+        saveCustomElevenVoices(elevenList);
+        renderCustomElevenVoices();
         
         // 성공 표시
         saveCustomVoiceBtn.textContent = '✅ 저장됨';
@@ -3831,6 +4282,7 @@
       try {
         if (typeof currentConfig !== 'undefined' && currentConfig && currentConfig.customVoiceId) {
           customVoiceIdInput.value = currentConfig.customVoiceId;
+          if (customVoiceNameInput) customVoiceNameInput.value = currentConfig.customVoiceName || '';
           if (savedVoiceIdStatus) {
             savedVoiceIdStatus.style.display = 'block';
             savedVoiceIdStatus.textContent = `✅ 저장됨: ${currentConfig.customVoiceId}`;
@@ -3842,11 +4294,149 @@
     }, 500);
   }
   
+  renderCustomElevenVoices();
+
+  // ============================================================
+  // 🆕 타입캐스트 음성 저장/로드 시스템
+  // ============================================================
+  function loadTypecastVoices() {
+    try {
+      return JSON.parse(localStorage.getItem('typecastVoices') || '[]');
+    } catch { return []; }
+  }
+  function saveTypecastVoices(list) {
+    try { localStorage.setItem('typecastVoices', JSON.stringify(list)); } catch {}
+    if (window._updateCollapseBadges) window._updateCollapseBadges();
+  }
+
+  function renderTypecastVoiceList() {
+    const listEl = document.getElementById('savedTypecastVoiceList');
+    const selEl = document.getElementById('typecastVoiceSelect');
+    const list = loadTypecastVoices();
+
+    // 1. 설정 페이지 - 저장된 음성 칩 표시
+    if (listEl) {
+      if (list.length === 0) {
+        listEl.innerHTML = '<div style="font-size:11px; color:var(--text-dim); padding:4px;">저장된 음성이 없습니다. 위에서 추가하세요.</div>';
+      } else {
+        listEl.innerHTML = list.map((v, i) =>
+          `<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 10px; background:rgba(255,107,107,0.15); border:1px solid rgba(255,107,107,0.3); border-radius:100px; font-size:11px; color:#ff6b6b;">
+            🎙️ ${v.name} <span style="opacity:.65; font-family:monospace; font-size:10px;">${v.id.substring(0,12)}...</span>
+            <button data-idx="${i}" class="__delTypecastVoice" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:13px; padding:0 0 0 4px;">×</button>
+          </span>`
+        ).join('');
+        listEl.querySelectorAll('.__delTypecastVoice').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (!confirm('이 타입캐스트 음성을 삭제하시겠습니까?')) return;
+            const idx = Number(btn.dataset.idx);
+            const cur = loadTypecastVoices();
+            cur.splice(idx, 1);
+            saveTypecastVoices(cur);
+            renderTypecastVoiceList();
+          });
+        });
+      }
+    }
+
+    // 2. 더빙옵션 - 드롭다운 갱신
+    if (selEl) {
+      const cur = selEl.value;
+      if (list.length === 0) {
+        selEl.innerHTML = '<option value="">-- 저장된 타입캐스트 음성 없음 (설정에서 추가) --</option>';
+      } else {
+        selEl.innerHTML = '<option value="">-- 사용 안 함 --</option>' +
+          list.map(v => `<option value="${v.id}" data-name="${v.name}">${v.name}</option>`).join('');
+        if (cur && list.some(v => v.id === cur)) selEl.value = cur;
+      }
+    }
+  }
+
+  // 저장 버튼
+  const saveTypecastVoiceBtn = document.getElementById('saveTypecastVoiceBtn');
+  const typecastVoiceNameInput = document.getElementById('typecastVoiceName');
+  const typecastVoiceIdInput = document.getElementById('typecastVoiceId');
+  if (saveTypecastVoiceBtn) {
+    saveTypecastVoiceBtn.addEventListener('click', () => {
+      const name = (typecastVoiceNameInput?.value || '').trim();
+      const id = (typecastVoiceIdInput?.value || '').trim();
+      if (!name || !id) {
+        alert('음성 이름과 Voice ID 둘 다 입력하세요!');
+        return;
+      }
+      const list = loadTypecastVoices();
+      if (list.some(v => v.id === id)) {
+        alert('이미 저장된 Voice ID입니다.');
+        return;
+      }
+      list.push({ name, id });
+      saveTypecastVoices(list);
+      typecastVoiceNameInput.value = '';
+      typecastVoiceIdInput.value = '';
+      renderTypecastVoiceList();
+      saveTypecastVoiceBtn.textContent = '✅ 저장됨!';
+      setTimeout(() => { saveTypecastVoiceBtn.textContent = '💾 저장'; }, 1500);
+    });
+  }
+
+  renderTypecastVoiceList();
+
+  // ============================================================
+  // 🆕 TTS Provider 라디오 + 선택된 목소리 표시 동기화
+  // ============================================================
+  function updateSelectedVoiceDisplay() {
+    const display = document.getElementById('selectedVoiceName');
+    if (!display) return;
+    const provider = document.querySelector('input[name="ttsProvider"]:checked')?.value || 'edge';
+    
+    if (provider === 'edge') {
+      const sel = document.getElementById('voiceSelect');
+      const name = sel?.options[sel.selectedIndex]?.text || '선희';
+      display.textContent = `${name} (Edge TTS 무료)`;
+      display.style.color = 'var(--accent)';
+    } else if (provider === 'typecast') {
+      const sel = document.getElementById('typecastVoiceSelect');
+      const name = sel?.options[sel.selectedIndex]?.text || '';
+      if (!name || name.includes('저장된') || name.includes('사용 안 함')) {
+        display.textContent = '⚠️ 타입캐스트 음성을 설정에서 추가하세요';
+        display.style.color = '#ef4444';
+      } else {
+        display.textContent = `${name} (타입캐스트)`;
+        display.style.color = '#ff6b6b';
+      }
+    } else if (provider === 'elevenlabs') {
+      display.textContent = `ElevenLabs 음성 (설정에서 등록한 음성)`;
+      display.style.color = '#6366f1';
+    }
+  }
+
+  // 라디오 변경 시
+  document.querySelectorAll('input[name="ttsProvider"]').forEach(radio => {
+    radio.addEventListener('change', updateSelectedVoiceDisplay);
+  });
+  // 드롭다운 변경 시
+  document.getElementById('voiceSelect')?.addEventListener('change', () => {
+    // Edge TTS 드롭다운 선택 시 자동으로 라디오도 Edge로
+    document.getElementById('ttsProviderEdge').checked = true;
+    updateSelectedVoiceDisplay();
+  });
+  document.getElementById('typecastVoiceSelect')?.addEventListener('change', () => {
+    // 타입캐스트 음성 선택 시 자동으로 라디오도 타입캐스트로
+    const tcSel = document.getElementById('typecastVoiceSelect');
+    if (tcSel?.value) {
+      document.getElementById('ttsProviderTypecast').checked = true;
+    }
+    updateSelectedVoiceDisplay();
+  });
+
+  // 초기 렌더
+  setTimeout(updateSelectedVoiceDisplay, 500);
+
   // 목소리 ID 복사 버튼
   if (copyVoiceIdBtn) {
     copyVoiceIdBtn.addEventListener('click', () => {
       const selectedVoice = elevenLabsVoiceSel?.value;
-      const voiceId = customVoiceIdInput?.value?.trim() || ELEVENLABS_VOICE_IDS[selectedVoice] || '';
+      const customSaved = loadCustomElevenVoices().find(v => v.name === selectedVoice);
+      const voiceId = customVoiceIdInput?.value?.trim() || (customSaved && customSaved.voiceId) || ELEVENLABS_VOICE_IDS[selectedVoice] || '';
       
       if (!voiceId) {
         alert('먼저 ElevenLabs 목소리를 선택하거나 커스텀 ID를 입력하세요!');
@@ -3870,7 +4460,8 @@
   if (elevenLabsVoiceSel) {
     elevenLabsVoiceSel.addEventListener('change', () => {
       const selectedVoice = elevenLabsVoiceSel.value;
-      const voiceId = ELEVENLABS_VOICE_IDS[selectedVoice] || '';
+      const customSaved = loadCustomElevenVoices().find(v => v.name === selectedVoice);
+      const voiceId = (customSaved && customSaved.voiceId) || ELEVENLABS_VOICE_IDS[selectedVoice] || '';
       if (elevenLabsVoiceIdDiv) {
         if (voiceId) {
           elevenLabsVoiceIdDiv.textContent = `Voice ID: ${voiceId}`;
@@ -3901,6 +4492,7 @@
   }
   function saveMyBgmLibrary(list) {
     localStorage.setItem('myBgmLibrary', JSON.stringify(list));
+    if (window._updateCollapseBadges) window._updateCollapseBadges();
   }
   
   const builtinBgmSelect = document.getElementById('builtinBgmSelect');
@@ -4273,6 +4865,9 @@
     if (generatedScriptEditStep4) generatedScriptEditStep4.value = newScript;
     // 플래그 해제 (다음 tick에)
     setTimeout(() => { isReapplying = false; }, 50);
+
+    // 🆕 줄 수 카운터 업데이트
+    if (typeof updateScriptLineCountStep4 === 'function') updateScriptLineCountStep4();
     
     // 확정 상태 초기화 (대본 바뀌었으니 다시 확정해야 함)
     isProductScriptConfirmed = false;
@@ -4544,6 +5139,28 @@
       });
     });
   }
+
+  // 🆕 대본 줄 수 카운터
+  function updateScriptLineCountStep4() {
+    if (!generatedScriptEditStep4) return;
+    const lineCountBox = document.getElementById('scriptLineCountStep4');
+    const lineCountVal = document.getElementById('scriptLineCountValStep4');
+    if (!lineCountBox || !lineCountVal) return;
+    const text = (generatedScriptEditStep4.value || '').trim();
+    if (!text) {
+      lineCountBox.style.display = 'none';
+      return;
+    }
+    const lines = text.split('\n').filter(l => l.trim().length > 0).length;
+    lineCountVal.textContent = lines;
+    lineCountBox.style.display = 'block';
+  }
+  if (generatedScriptEditStep4) {
+    generatedScriptEditStep4.addEventListener('input', updateScriptLineCountStep4);
+    // 대본 생성 후 자동 업데이트도
+    const observer = new MutationObserver(updateScriptLineCountStep4);
+    observer.observe(generatedScriptEditStep4, { attributes: true, attributeFilter: ['value'] });
+  }
   
   // 스텝 4 타입캐스트 TTS 파일 선택
   const selectCustomTtsBtnStep4 = document.getElementById('selectCustomTtsBtnStep4');
@@ -4608,6 +5225,22 @@
     arialbd: 'Arial Bold',
     impact: 'Impact',
     georgia: 'Georgia',
+    // 🆕 카페24 무료 폰트
+    cafe24_danjunghae: '✨ 카페24 단정해',
+    cafe24_dongdong: '✨ 카페24 동동',
+    cafe24_dongdong_lt: '✨ 카페24 동동 Light',
+    cafe24_moyamoya: '✨ 카페24 모야모야',
+    cafe24_ohsquare: '✨ 카페24 오스퀘어',
+    cafe24_ohsquare_air: '✨ 카페24 오스퀘어 Air',
+    cafe24_oneprettynight: '✨ 카페24 원프리티나잇',
+    cafe24_simplehae: '✨ 카페24 심플해',
+    cafe24_ssurround: '✨ 카페24 써라운드',
+    cafe24_supermagic: '✨ 카페24 슈퍼매직 Bold',
+    cafe24_supermagic_rg: '✨ 카페24 슈퍼매직',
+    cafe24_angbanana: '✨ 카페24 앙바나나',
+    cafe24_behappy: '✨ 카페24 비해피',
+    cafe24_decobox: '✨ 카페24 데코박스',
+    cafe24_proslimfit: '✨ 카페24 프로슬림핏',
   };
   const fontFamilySel = document.getElementById('fontFamily');
   Object.entries(FONTS).forEach(([k, v]) => {
@@ -4756,6 +5389,35 @@
     
     previewSubtitle.style.color = preset.fontColor;
     previewSubtitle.style.fontSize = (selectedSubtitleSize * 0.21) + 'px';
+
+    // 🆕 글씨체 적용 (CSS 웹 폰트 매핑)
+    const fontKey = (fontFamilySel?.value || '').trim();
+    const FONT_CSS_MAP = {
+      malgun: '"Malgun Gothic", sans-serif',
+      malgunbd: '"Malgun Gothic", sans-serif',
+      batang: '"Batang", serif',
+      gulim: '"Gulim", sans-serif',
+      arial: 'Arial, sans-serif',
+      arialbd: 'Arial Black, Arial, sans-serif',
+      impact: 'Impact, sans-serif',
+      georgia: 'Georgia, serif',
+      cafe24_danjunghae: '"Cafe24 Danjunghae", sans-serif',
+      cafe24_dongdong: '"Cafe24 Dongdong", sans-serif',
+      cafe24_dongdong_lt: '"Cafe24 Dongdong Light", sans-serif',
+      cafe24_moyamoya: '"Cafe24 Moyamoya", sans-serif',
+      cafe24_ohsquare: '"Cafe24 Ohsquare", sans-serif',
+      cafe24_ohsquare_air: '"Cafe24 Ohsquare Air", sans-serif',
+      cafe24_oneprettynight: '"Cafe24 Oneprettynight", sans-serif',
+      cafe24_simplehae: '"Cafe24 Simplehae", sans-serif',
+      cafe24_ssurround: '"Cafe24 Ssurround", sans-serif',
+      cafe24_supermagic: '"Cafe24 Supermagic", sans-serif',
+      cafe24_supermagic_rg: '"Cafe24 Supermagic Regular", sans-serif',
+      cafe24_angbanana: '"Cafe24 Angbanana", sans-serif',
+      cafe24_behappy: '"Cafe24 Behappy", sans-serif',
+      cafe24_decobox: '"Cafe24 Decobox", sans-serif',
+      cafe24_proslimfit: '"Cafe24 PROSlimFit", sans-serif',
+    };
+    previewSubtitle.style.fontFamily = FONT_CSS_MAP[fontKey] || 'inherit';
     
     // 스타일별 효과
     if (preset.style === 'bar') {
@@ -4826,10 +5488,88 @@
       selectedSubtitleSize = parseInt(subtitleSizeSlider.value);
       if (subtitleSizeValue) subtitleSizeValue.textContent = selectedSubtitleSize;
       
-      // 미리보기 업데이트 (270px 기준, 비율 0.25)
-      if (previewSubtitle) {
-        previewSubtitle.style.fontSize = (selectedSubtitleSize * 0.21) + 'px';
+      // 미리보기 업데이트
+      if (typeof updateSubtitlePreview === 'function') updateSubtitlePreview();
+    });
+  }
+
+  // 🆕 글씨체 변경 시 미리보기 갱신
+  if (fontFamilySel) {
+    fontFamilySel.addEventListener('change', () => {
+      if (typeof updateSubtitlePreview === 'function') updateSubtitlePreview();
+    });
+  }
+
+  // 🆕 크기 + 글씨체 저장/리셋
+  const saveFontSizeBtn = document.getElementById('saveFontSizeBtn');
+  const resetFontSizeBtn = document.getElementById('resetFontSizeBtn');
+  const savedFontSizeStatus = document.getElementById('savedFontSizeStatus');
+  
+  // 시작 시 저장된 크기 + 글씨체 복원
+  try {
+    const savedSize = localStorage.getItem('savedSubtitleSize');
+    const savedFontFamily = localStorage.getItem('savedFontFamily');
+    const restored = [];
+    
+    if (savedSize) {
+      const sz = parseInt(savedSize);
+      if (sz >= 16 && sz <= 100) {
+        selectedSubtitleSize = sz;
+        if (subtitleSizeSlider) subtitleSizeSlider.value = sz;
+        if (subtitleSizeValue) subtitleSizeValue.textContent = sz;
+        restored.push(`크기 ${sz}px`);
       }
+    }
+    if (savedFontFamily && fontFamilySel) {
+      // option이 존재하는지 확인
+      const optExists = Array.from(fontFamilySel.options).some(o => o.value === savedFontFamily);
+      if (optExists) {
+        fontFamilySel.value = savedFontFamily;
+        const fontName = fontFamilySel.options[fontFamilySel.selectedIndex]?.text || savedFontFamily;
+        restored.push(`글씨체 ${fontName}`);
+      }
+    }
+    if (restored.length > 0 && savedFontSizeStatus) {
+      savedFontSizeStatus.textContent = `✅ 복원됨: ${restored.join(' + ')}`;
+      savedFontSizeStatus.style.display = 'block';
+    }
+    if (typeof updateSubtitlePreview === 'function') setTimeout(updateSubtitlePreview, 100);
+  } catch(e) {}
+
+  if (saveFontSizeBtn) {
+    saveFontSizeBtn.addEventListener('click', () => {
+      const cur = subtitleSizeSlider ? parseInt(subtitleSizeSlider.value) : 50;
+      const curFont = fontFamilySel?.value || '';
+      try {
+        localStorage.setItem('savedSubtitleSize', String(cur));
+        if (curFont) {
+          localStorage.setItem('savedFontFamily', curFont);
+        } else {
+          localStorage.removeItem('savedFontFamily');
+        }
+        const fontName = fontFamilySel?.options[fontFamilySel.selectedIndex]?.text || '자동';
+        if (savedFontSizeStatus) {
+          savedFontSizeStatus.textContent = `✅ 저장됨: 크기 ${cur}px + 글씨체 ${fontName}`;
+          savedFontSizeStatus.style.display = 'block';
+        }
+        saveFontSizeBtn.textContent = '✅ 저장 완료!';
+        setTimeout(() => { saveFontSizeBtn.textContent = '💾 크기 + 글씨체 저장'; }, 1500);
+      } catch(e) { alert('저장 실패: ' + e.message); }
+    });
+  }
+
+  if (resetFontSizeBtn) {
+    resetFontSizeBtn.addEventListener('click', () => {
+      try {
+        localStorage.removeItem('savedSubtitleSize');
+        localStorage.removeItem('savedFontFamily');
+      } catch(e) {}
+      selectedSubtitleSize = 50;
+      if (subtitleSizeSlider) subtitleSizeSlider.value = 50;
+      if (subtitleSizeValue) subtitleSizeValue.textContent = 50;
+      if (fontFamilySel) fontFamilySel.value = '';
+      if (savedFontSizeStatus) savedFontSizeStatus.style.display = 'none';
+      if (typeof updateSubtitlePreview === 'function') updateSubtitlePreview();
     });
   }
 
@@ -7033,12 +7773,16 @@
   document.getElementById('nextBtn').addEventListener('click', () => {
     if (!__lockNav()) return;
     if (!validateStep(currentStep)) return;
-    goToStep(currentStep + 1);
+    let nextStep = currentStep + 1;
+    if (nextStep === 5) nextStep = 6; // 🆕 템플릿 단계 건너뛰기
+    goToStep(nextStep);
   });
 
   document.getElementById('prevBtn').addEventListener('click', () => {
     if (!__lockNav()) return;
-    goToStep(currentStep - 1);
+    let prevStep = currentStep - 1;
+    if (prevStep === 5) prevStep = 4; // 🆕 템플릿 단계 건너뛰기
+    goToStep(prevStep);
   });
 
   // 진행 인디케이터 클릭
@@ -7169,9 +7913,10 @@
     currentConfig = await window.api.loadConfig();
     document.getElementById('groqKey').value = currentConfig.groqApiKey || '';
     document.getElementById('openaiKey').value = currentConfig.openaiApiKey || '';
-    document.getElementById('anthropicKey').value = currentConfig.anthropicApiKey || '';
-    document.getElementById('geminiKey').value = currentConfig.geminiApiKey || '';
+    if (document.getElementById('anthropicKey')) document.getElementById('anthropicKey').value = currentConfig.anthropicApiKey || '';
+    if (document.getElementById('geminiKey')) document.getElementById('geminiKey').value = currentConfig.geminiApiKey || '';
     document.getElementById('elevenLabsKey').value = currentConfig.elevenLabsApiKey || '';
+    if (document.getElementById('typecastApiKey')) document.getElementById('typecastApiKey').value = currentConfig.typecastApiKey || '';
     document.getElementById('llmProvider').value = currentConfig.llmProvider || 'groq';
     document.getElementById('llmModel').value = currentConfig.llmModel || '';
     document.getElementById('coupangAccessKey').value = currentConfig.coupangAccessKey || '';
@@ -7234,10 +7979,12 @@
     currentConfig = {
       groqApiKey: document.getElementById('groqKey').value.trim(),
       openaiApiKey: document.getElementById('openaiKey').value.trim(),
-      anthropicApiKey: document.getElementById('anthropicKey').value.trim(),
-      geminiApiKey: document.getElementById('geminiKey').value.trim(),
+      anthropicApiKey: document.getElementById('anthropicKey')?.value?.trim() || '',
+      geminiApiKey: document.getElementById('geminiKey')?.value?.trim() || '',
       elevenLabsApiKey: document.getElementById('elevenLabsKey').value.trim(),
+      typecastApiKey: document.getElementById('typecastApiKey')?.value?.trim() || '',
       customVoiceId: document.getElementById('customVoiceId')?.value?.trim() || '',
+      customVoiceName: document.getElementById('customVoiceName')?.value?.trim() || '',
       llmProvider: document.getElementById('llmProvider').value,
       llmModel: document.getElementById('llmModel').value.trim(),
       coupangAccessKey: document.getElementById('coupangAccessKey').value.trim(),
@@ -7253,6 +8000,7 @@
       defaultBgmVolume: parseInt(document.getElementById('defaultBgmVolume')?.value) || 15,
     };
     await window.api.saveConfig(currentConfig);
+    if (window._updateCollapseBadges) window._updateCollapseBadges();
     const msg = document.getElementById('saveMsg');
     msg.textContent = '✓ 저장되었습니다';
     setTimeout(() => msg.textContent = '', 2000);
@@ -7334,9 +8082,13 @@
     if (progressStallTimer) clearTimeout(progressStallTimer);
   });
 
-  document.getElementById('openFolderBtn').addEventListener('click', () => {
-    window.api.openWorkFolder();
-  });
+  // 결과 폴더 열기 버튼 (제거됨 - 파일 결과의 폴더 버튼으로 대체)
+  const __openFolderBtn = document.getElementById('openFolderBtn');
+  if (__openFolderBtn) {
+    __openFolderBtn.addEventListener('click', () => {
+      window.api.openWorkFolder();
+    });
+  }
 
   // ===== 작업 기록 + 파일 결과 =====
   let jobs = [];
@@ -7383,6 +8135,52 @@
     renderJobs();
   }
 
+  function getOutputFilesFromResult(result) {
+    const files = [];
+    const seen = new Set();
+
+    const addPath = (value, label = null) => {
+      if (!value || typeof value !== 'string') return;
+      // 완성 영상/대본처럼 실제 파일 경로로 보이는 값만 추가
+      if (!/[A-Za-z]:\|^\\|\//.test(value) && !/\.(mp4|mov|mkv|webm|txt|srt|mp3)$/i.test(value)) return;
+      if (seen.has(value)) return;
+      seen.add(value);
+      files.push({
+        name: label || value.split(/[\\/]/).pop() || '완성 파일',
+        path: value,
+        createdAt: Date.now(),
+      });
+    };
+
+    if (!result) return files;
+
+    addPath(result.outputPath);
+    addPath(result.finalPath);
+    addPath(result.videoPath);
+    addPath(result.path);
+    addPath(result.filePath);
+    // 🆕 대본 파일은 제외 (대장 요청)
+    // addPath(result.transcriptPath, '대본 파일');
+
+    if (Array.isArray(result.files)) {
+      result.files.forEach(f => {
+        const path = f.path || f.outputPath || f;
+        // 🆕 .txt/.srt 파일 (대본/자막) 제외
+        if (typeof path === 'string' && /\.(txt|srt)$/i.test(path)) return;
+        addPath(path, f.name);
+      });
+    }
+    if (Array.isArray(result.outputs)) {
+      result.outputs.forEach(f => {
+        const path = f.path || f.outputPath || f;
+        if (typeof path === 'string' && /\.(txt|srt)$/i.test(path)) return;
+        addPath(path, f.name);
+      });
+    }
+
+    return files;
+  }
+
   function completeJob(jobId, result) {
     const job = jobs.find(j => j.id === jobId);
     if (job) {
@@ -7390,14 +8188,15 @@
       job.progress = 100;
       job.message = '완료!';
       job.completedAt = Date.now();
-      if (result && result.outputPath) {
-        completedFiles.unshift({
-          name: result.outputPath.split(/[/\\]/).pop(),
-          path: result.outputPath,
-          createdAt: Date.now(),
-        });
-      }
     }
+
+    const outputFiles = getOutputFilesFromResult(result);
+    if (outputFiles.length > 0) {
+      completedFiles.unshift(...outputFiles);
+    } else if (result && (result.outputPath || result.finalPath || result.videoPath || result.path)) {
+      console.warn('[file-result] 결과 파일 경로를 인식하지 못했습니다:', result);
+    }
+
     if (window.__longJobTimer) { clearTimeout(window.__longJobTimer); window.__longJobTimer = null; }
     renderJobs();
     renderFiles();
@@ -7416,6 +8215,123 @@
 
   function renderJobs() {
     const container = document.getElementById('jobList');
+    const activeContainer = document.getElementById('activeJobsList');
+    
+    // 둘 다 없으면 종료 (안전망)
+    if (!container && !activeContainer) return;
+    
+    // 진행중 작업만 필터링 (메인 화면용)
+    const activeJobs = jobs.filter(j => j.status === 'processing');
+    
+    // 사이드바용 (있으면 - 모든 상태 표시)
+    if (container) {
+      if (jobs.length === 0) {
+        container.innerHTML = '<div class="empty-state">아직 작업 기록이 없어요.<br>영상을 만들면 여기에 표시됩니다.</div>';
+      } else {
+        container.innerHTML = jobs.map(buildJobItemHtml).join('');
+      }
+    }
+    
+    // 메인 화면용 (진행중인 것만)
+    if (activeContainer) {
+      if (activeJobs.length === 0) {
+        activeContainer.innerHTML = '';
+        activeContainer.style.display = 'none';
+      } else {
+        activeContainer.style.display = 'block';
+        activeContainer.innerHTML = activeJobs.map(buildJobItemHtml).join('');
+      }
+    }
+    
+    // 취소 버튼 핸들러
+    document.querySelectorAll('.job-cancel-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const jobId = btn.dataset.jobId;
+        if (!jobId) return;
+        btn.disabled = true;
+        btn.textContent = '⏳ 취소 중...';
+        try {
+          await window.api.cancelVideo(jobId);
+          const job = window.__jobs?.find?.(j => j.id === jobId);
+          if (job) {
+            job.status = 'cancelled';
+            job.message = '사용자가 작업을 취소함';
+            job.completedAt = Date.now();
+          }
+          renderJobs();
+          if (typeof renderJobHistory === 'function') renderJobHistory();
+        } catch (err) {
+          console.warn('cancelVideo 실패:', err);
+          btn.disabled = false;
+          btn.textContent = '⛔ 이 작업 취소';
+        }
+      });
+    });
+  }
+  
+  // 작업 아이템 HTML 생성 (공통)
+  function buildJobItemHtml(job) {
+    const elapsedSec = Math.round((Date.now() - job.createdAt) / 1000);
+    const elapsedMin = Math.floor(elapsedSec / 60);
+    const elapsedText = elapsedMin > 0 
+      ? `${elapsedMin}분 ${elapsedSec % 60}초`
+      : `${elapsedSec}초`;
+    
+    const statusIcon = job.status === 'processing' ? '⏳'
+      : job.status === 'completed' ? '✅'
+      : job.status === 'cancelled' ? '⛔'
+      : '❌';
+    const statusText = job.status === 'processing' ? '처리 중'
+      : job.status === 'completed' ? '완료'
+      : job.status === 'cancelled' ? '취소됨'
+      : '실패';
+    
+    const isProcessing = job.status === 'processing';
+    const cardStyle = isProcessing
+      ? 'background:linear-gradient(135deg, rgba(245,158,11,0.06), rgba(249,115,22,0.04)); border:2px solid rgba(245,158,11,0.3); border-radius:10px; padding:14px; margin-bottom:10px;'
+      : 'background:var(--bg-2); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px;';
+    
+    return `
+    <div class="job-item ${job.status}" style="${cardStyle}">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="font-size:14px;">${statusIcon}</span>
+        <b style="color:${isProcessing ? '#f59e0b' : 'var(--text)'}; font-size:13px;">${statusText}</b>
+        <span style="margin-left:auto; font-size:10px; color:var(--text-dim);">${formatTime(job.createdAt)}</span>
+      </div>
+      <div style="font-size:13px; font-weight:600; word-break:break-all; margin-bottom:6px;">${job.name}</div>
+      ${isProcessing ? `
+        <div style="font-size:11px; color:var(--accent); margin-bottom:6px; min-height:16px;">
+          ${job.message || '시작 중...'}
+        </div>
+        <div style="font-size:10px; color:var(--text-dim); margin-bottom:6px;">
+          🕐 경과: ${elapsedText} · 진행률: ${Math.round(job.progress)}%
+        </div>
+        <div style="height:8px; background:var(--bg-1); border-radius:4px; overflow:hidden; margin-bottom:10px;">
+          <div style="width:${job.progress}%; height:100%; background:linear-gradient(90deg, #f59e0b, #f97316); transition:width 0.3s;"></div>
+        </div>
+        <button
+          class="job-cancel-btn"
+          data-job-id="${job.id}"
+          style="width:100%; padding:8px 10px; background:#fee2e2; color:#ef4444; border:1px solid #fecaca; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;"
+          onmouseover="this.style.background='#fecaca'"
+          onmouseout="this.style.background='#fee2e2'"
+        >⛔ 이 작업 취소</button>
+      ` : job.status === 'failed' ? `
+        <div style="font-size:10px; color:#ef4444; margin-top:4px;">${job.message || '알 수 없는 오류'}</div>
+      ` : job.status === 'cancelled' ? `
+        <div style="font-size:10px; color:#737373; margin-top:4px;">⛔ ${job.message || '사용자가 취소함'}</div>
+      ` : `
+        <div style="font-size:10px; color:#10b981; margin-top:4px;">총 소요: ${job.completedAt ? Math.round((job.completedAt - job.createdAt) / 1000) + '초' : '-'}</div>
+      `}
+    </div>
+    `;
+  }
+  
+  // (이전 코드 보존용 - 사용 안 함)
+  function renderJobs_OLD() {
+    const container = document.getElementById('jobList');
+    if (!container) return;
     if (jobs.length === 0) {
       container.innerHTML = '<div class="empty-state">아직 작업 기록이 없어요.<br>영상을 만들면 여기에 표시됩니다.</div>';
       return;
@@ -7493,7 +8409,8 @@
             job.message = '사용자가 작업을 취소함';
             job.completedAt = Date.now();
           }
-          renderJobHistory();
+          renderJobs();
+          if (typeof renderJobHistory === 'function') renderJobHistory();
         } catch (err) {
           console.warn('cancelVideo 실패:', err);
           btn.disabled = false;
@@ -7510,31 +8427,56 @@
     }
   }, 1000);
 
+  function safeText(value) {
+    return String(value ?? '').replace(/[&<>"]/g, (ch) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
+    }[ch]));
+  }
+
   function renderFiles() {
     const container = document.getElementById('fileList');
+    if (!container) return;  // 🆕 안전망 - fileList 없어도 에러 안 남
     if (completedFiles.length === 0) {
       container.innerHTML = '<div class="empty-state">완료된 파일이 없습니다.</div>';
       return;
     }
 
     container.innerHTML = completedFiles.map((file, idx) => `
-      <div class="file-item" onclick="playVideo(${idx})" title="클릭하면 영상 재생">
-        <span class="file-icon">📹</span>
-        <span class="file-name">${file.name}</span>
-        <span style="font-size:9px; color:var(--text-dim); margin-left:auto;">${formatTime(file.createdAt)}</span>
+      <div class="file-item" style="display:block; cursor:default;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span class="file-icon">📹</span>
+          <span class="file-name" title="${safeText(file.path)}">${safeText(file.name)}</span>
+          <span style="font-size:9px; color:var(--text-dim); margin-left:auto;">${formatTime(file.createdAt)}</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="file-open-btn" data-file-idx="${idx}" style="flex:1; padding:8px; border:none; border-radius:6px; background:var(--accent); color:white; font-size:11px; font-weight:700; cursor:pointer;">📹 파일 보기</button>
+          <button class="file-folder-btn" data-file-idx="${idx}" style="flex:1; padding:8px; border:1px solid var(--accent); border-radius:6px; background:var(--bg-card); color:var(--accent); font-size:11px; font-weight:700; cursor:pointer;">📂 폴더 열기</button>
+        </div>
       </div>
     `).join('');
+
+    document.querySelectorAll('.file-open-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await playVideo(Number(btn.dataset.fileIdx));
+      });
+    });
+
+    document.querySelectorAll('.file-folder-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await window.api.openWorkFolder();
+      });
+    });
   }
 
-  // 영상 재생 함수
+  // 영상/파일 열기 함수
   async function playVideo(idx) {
     const file = completedFiles[idx];
     if (file && file.path) {
-      // Electron에서 영상 재생
       if (window.api.openFile) {
         await window.api.openFile(file.path);
       } else {
-        // fallback: 폴더 열기
         window.api.openWorkFolder();
       }
     }
@@ -7673,6 +8615,8 @@
       blurMaskSettings: useBlurMask ? blurMaskSettings : null,
       // 말투 선택
       speechStyle: selectedSpeechStyle, // 'casual' | 'formal'
+      // 🆕 TTS Provider (라디오로 선택)
+      ttsProvider: document.querySelector('input[name="ttsProvider"]:checked')?.value || 'edge',
       // ElevenLabs TTS
       elevenLabsVoice: (() => {
         const customId = document.getElementById('customVoiceId')?.value?.trim();
@@ -7682,6 +8626,14 @@
           return { type: 'elevenlabs', voiceId: ELEVENLABS_VOICE_IDS[selectedVoice], name: selectedVoice };
         }
         return null;
+      })(),
+      // 🆕 타입캐스트 TTS
+      typecastVoice: (() => {
+        const sel = document.getElementById('typecastVoiceSelect');
+        const voiceId = sel?.value || '';
+        if (!voiceId) return null;
+        const voiceName = sel.options[sel.selectedIndex]?.text || '';
+        return { type: 'typecast', voiceId, name: voiceName };
       })(),
       // BGM 설정 (🆕 내 BGM 라이브러리는 path로 풀어서 전달)
       bgmPath: (function(){
@@ -8017,6 +8969,410 @@
   renderJobs();
   renderFiles();
 
+  // ===== 🆕 설정 페이지 카드 접기/펴기 + 등록 배지 =====
+  (function setupCollapsibleCards() {
+    // 1. 클릭 시 토글
+    document.querySelectorAll('.card.collapsible > .collapse-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        // 헤더 안의 버튼/링크는 토글 무시 (현재는 없지만 안전)
+        if (e.target.closest('button, a, input, select')) return;
+        const card = header.parentElement;
+        card.classList.toggle('is-open');
+      });
+    });
+
+    // 2. 등록 상태 배지 갱신
+    function updateCollapseBadges() {
+      const setBadge = (id, isRegistered, registeredText, unregisteredText) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isRegistered) {
+          el.className = 'collapse-badge registered';
+          el.textContent = '✅ ' + registeredText;
+        } else {
+          el.className = 'collapse-badge unregistered';
+          el.textContent = '⚪ ' + unregisteredText;
+        }
+      };
+      
+      // API 키: Groq가 필수, 있으면 등록됨
+      const groqVal = (document.getElementById('groqKey')?.value || '').trim();
+      const openaiVal = (document.getElementById('openaiKey')?.value || '').trim();
+      const geminiVal = (document.getElementById('geminiKey')?.value || '').trim();
+      const apiCount = [groqVal, openaiVal, geminiVal].filter(Boolean).length;
+      setBadge('badgeApiKeys', apiCount > 0,
+        apiCount === 3 ? '3개 등록됨' : `${apiCount}개 등록됨`,
+        '미등록');
+      
+      // 타입캐스트: API Token + 음성 1개 이상
+      const tcKey = (document.getElementById('typecastApiKey')?.value || '').trim();
+      let tcVoices = [];
+      try { tcVoices = JSON.parse(localStorage.getItem('typecastVoices') || '[]'); } catch {}
+      const tcOk = !!tcKey && tcVoices.length > 0;
+      setBadge('badgeTypecast', tcOk,
+        `등록됨 (음성 ${tcVoices.length}개)`,
+        !tcKey ? '미등록' : '음성 추가 필요');
+      
+      // ElevenLabs: API Key + 음성 1개 이상 (또는 customVoiceId)
+      const elKey = (document.getElementById('elevenLabsKey')?.value || '').trim();
+      let elVoices = [];
+      try { elVoices = JSON.parse(localStorage.getItem('elevenLabsVoices') || '[]'); } catch {}
+      const elCustomId = (document.getElementById('customVoiceId')?.value || '').trim();
+      const elVoiceCount = elVoices.length + (elCustomId ? 1 : 0);
+      const elOk = !!elKey && elVoiceCount > 0;
+      setBadge('badgeElevenLabs', elOk,
+        `등록됨 (음성 ${elVoiceCount}개)`,
+        !elKey ? '미등록' : '음성 추가 필요');
+      
+      // BGM: 내 BGM 라이브러리에 1개 이상
+      let bgmList = [];
+      try { bgmList = JSON.parse(localStorage.getItem('myBgmLibrary') || '[]'); } catch {}
+      const bgmOk = bgmList.length > 0;
+      setBadge('badgeBgm', bgmOk,
+        `${bgmList.length}개 등록됨`,
+        '미등록');
+      
+      // 🆕 쿠팡 본인 추천 ID
+      const coupangId = (document.getElementById('coupangPartnerCode')?.value || '').trim();
+      const coupangIdOk = coupangId.length >= 5;  // AF1234567 같은 거 최소 길이
+      setBadge('badgeCoupangUserId', coupangIdOk,
+        `등록됨 (${coupangId})`,
+        '미등록');
+      
+      // 🆕 검색 카드 상단의 본인 ID 배지도 갱신
+      const subIdBadge = document.getElementById('coupangSubIdBadge');
+      if (subIdBadge) {
+        if (coupangIdOk) {
+          subIdBadge.textContent = `✅ 본인 ID: ${coupangId}`;
+          subIdBadge.style.background = 'rgba(34,197,94,0.12)';
+          subIdBadge.style.color = '#16a34a';
+          subIdBadge.style.borderColor = 'rgba(34,197,94,0.3)';
+        } else {
+          subIdBadge.textContent = '⚪ 본인 ID 미등록';
+          subIdBadge.style.background = 'rgba(148,163,184,0.1)';
+          subIdBadge.style.color = '#64748b';
+          subIdBadge.style.borderColor = 'rgba(148,163,184,0.25)';
+        }
+      }
+    }
+    
+    // 페이지 로드 후 + 키 변경 시마다 갱신
+    window._updateCollapseBadges = updateCollapseBadges;
+    setTimeout(updateCollapseBadges, 200);
+    setTimeout(updateCollapseBadges, 800);   // loadConfig 후 다시
+    setTimeout(updateCollapseBadges, 2000);  // localStorage 로드 후 한번 더
+    
+    // 키 입력 시 실시간 갱신
+    ['groqKey', 'openaiKey', 'geminiKey', 'typecastApiKey', 'elevenLabsKey', 'customVoiceId', 'coupangPartnerCode'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateCollapseBadges);
+    });
+  })();
+
+  // ===== 🆕 쿠팡 파트너스 상품 검색 =====
+  (function setupCoupangSearch() {
+    const searchBtn = document.getElementById('coupangSearchBtn');
+    const searchInput = document.getElementById('coupangSearchInput');
+    const resultsEl = document.getElementById('coupangResults');
+    const statusEl = document.getElementById('coupangSearchStatus');
+    
+    if (!searchBtn || !searchInput || !resultsEl) return;
+    
+    function showStatus(msg, type = 'info') {
+      if (!msg) {
+        statusEl.style.display = 'none';
+        return;
+      }
+      statusEl.style.display = 'block';
+      statusEl.textContent = msg;
+      if (type === 'error') {
+        statusEl.style.background = 'rgba(239,68,68,0.08)';
+        statusEl.style.color = '#dc2626';
+        statusEl.style.border = '1px solid rgba(239,68,68,0.25)';
+      } else if (type === 'success') {
+        statusEl.style.background = 'rgba(34,197,94,0.08)';
+        statusEl.style.color = '#16a34a';
+        statusEl.style.border = '1px solid rgba(34,197,94,0.25)';
+      } else {
+        statusEl.style.background = 'rgba(59,130,246,0.06)';
+        statusEl.style.color = '#1e40af';
+        statusEl.style.border = '1px solid rgba(59,130,246,0.2)';
+      }
+    }
+    
+    // 가격 포맷
+    function fmtPrice(price) {
+      if (typeof price !== 'number') return '';
+      return price.toLocaleString('ko-KR') + '원';
+    }
+    
+    // 사용자 본인 lptag 가져오기 (실시간)
+    function getUserLptag() {
+      return (document.getElementById('coupangPartnerCode')?.value || '').trim() || null;
+    }
+    
+    // 검색 결과 카드 렌더
+    function renderProductCard(p) {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--bg-card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:transform 0.15s, box-shadow 0.15s;';
+      card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = '0 8px 16px rgba(0,0,0,0.08)'; };
+      card.onmouseleave = () => { card.style.transform = ''; card.style.boxShadow = ''; };
+      
+      // 사진
+      const imgWrap = document.createElement('div');
+      imgWrap.style.cssText = 'aspect-ratio:1/1; background:#f5f5f5; overflow:hidden; position:relative;';
+      const img = document.createElement('img');
+      img.src = p.productImage || '';
+      img.style.cssText = 'width:100%; height:100%; object-fit:contain;';
+      img.onerror = () => { img.style.display = 'none'; };
+      imgWrap.appendChild(img);
+      // 로켓배송 배지
+      if (p.isRocket) {
+        const badge = document.createElement('div');
+        badge.textContent = '🚀 로켓배송';
+        badge.style.cssText = 'position:absolute; top:6px; left:6px; padding:3px 8px; background:rgba(59,130,246,0.95); color:white; font-size:10px; font-weight:700; border-radius:6px;';
+        imgWrap.appendChild(badge);
+      }
+      card.appendChild(imgWrap);
+      
+      // 본문
+      const body = document.createElement('div');
+      body.style.cssText = 'padding:10px 12px 12px 12px; flex:1; display:flex; flex-direction:column; gap:6px;';
+      
+      const name = document.createElement('div');
+      name.textContent = p.productName || '';
+      name.style.cssText = 'font-size:12px; line-height:1.4; color:var(--text); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;';
+      body.appendChild(name);
+      
+      const price = document.createElement('div');
+      price.textContent = fmtPrice(p.productPrice);
+      price.style.cssText = 'font-size:14px; font-weight:800; color:#f59e0b;';
+      body.appendChild(price);
+      
+      // 버튼 영역
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex; gap:6px; margin-top:6px;';
+      
+      // 🛒 상품 보러가기 (대장 lptag - 검색 결과 productUrl은 검색 시 subId 안 넘기면 마스터 lptag 박힘)
+      const viewBtn = document.createElement('button');
+      viewBtn.innerHTML = '🛒 보러가기';
+      viewBtn.style.cssText = 'flex:1; padding:8px 4px; background:var(--bg-2); color:var(--text); border:1px solid var(--line); border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.15s;';
+      viewBtn.onmouseenter = () => viewBtn.style.background = 'rgba(245,158,11,0.08)';
+      viewBtn.onmouseleave = () => viewBtn.style.background = 'var(--bg-2)';
+      viewBtn.onclick = () => {
+        if (p.productUrl) {
+          window.api.openExternalUrl(p.productUrl);
+        }
+      };
+      btnRow.appendChild(viewBtn);
+      
+      // 🔗 링크 만들기 (사용자 lptag로 발급)
+      const linkBtn = document.createElement('button');
+      linkBtn.innerHTML = '🔗 링크 만들기';
+      linkBtn.style.cssText = 'flex:1.2; padding:8px 4px; background:linear-gradient(135deg,#f59e0b,#f97316); color:white; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; transition:opacity 0.15s;';
+      linkBtn.onmouseenter = () => linkBtn.style.opacity = '0.85';
+      linkBtn.onmouseleave = () => linkBtn.style.opacity = '1';
+      linkBtn.onclick = () => handleMakeLink(p, linkBtn);
+      btnRow.appendChild(linkBtn);
+      
+      body.appendChild(btnRow);
+      card.appendChild(body);
+      return card;
+    }
+    
+    // 🔗 링크 만들기 클릭 핸들러
+    async function handleMakeLink(product, btn) {
+      const userLptag = getUserLptag();
+      
+      // ⚠️ 본인 ID 미등록 → 친절한 안내 모달
+      if (!userLptag) {
+        showNoUserIdGuide(product);
+        return;
+      }
+      
+      // 등록됨 → 딥링크 발급
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ 발급 중...';
+      
+      try {
+        // 🆕 관리자 API 키 가져오기 (localStorage)
+        let adminApiKeys = null;
+        try {
+          const accessKey = localStorage.getItem('coupangAccessKey') || '';
+          const secretKey = localStorage.getItem('coupangSecretKey') || '';
+          if (accessKey && secretKey) {
+            adminApiKeys = { accessKey, secretKey };
+          }
+        } catch (e) {}
+        
+        const result = await window.api.coupangDeeplink({
+          productUrl: product.productUrl,
+          subId: userLptag,
+          userLptag: userLptag,
+          adminApiKeys,
+        });
+        
+        if (!result.success) {
+          throw new Error(result.error || '링크 발급 실패');
+        }
+        
+        const link = result.shortenUrl || result.landingUrl;
+        // 클립보드 복사
+        await window.api.copyToClipboard(link);
+        
+        btn.innerHTML = '✅ 복사됨!';
+        showStatus(`✅ 링크 발급 + 클립보드 복사 완료\n${link}`, 'success');
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }, 2500);
+      } catch (err) {
+        console.error('[Coupang] 딥링크 오류:', err);
+        btn.innerHTML = '❌ 실패';
+        showStatus(err.message || '링크 발급 실패', 'error');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }, 2000);
+      }
+    }
+    
+    // 🆕 사용자 ID 미등록 시 친절한 안내 모달
+    function showNoUserIdGuide(product) {
+      // 기존 모달 있으면 제거
+      const old = document.getElementById('coupangNoIdModal');
+      if (old) old.remove();
+      
+      const modal = document.createElement('div');
+      modal.id = 'coupangNoIdModal';
+      modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+      
+      const box = document.createElement('div');
+      box.style.cssText = 'background:white; border-radius:16px; padding:24px 28px; max-width:480px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+      box.innerHTML = `
+        <div style="font-size:18px; font-weight:800; color:#f59e0b; margin-bottom:14px;">
+          🔗 본인 추천 링크 발급에 필요한 정보가 없어요
+        </div>
+        <div style="font-size:13px; line-height:1.7; color:#475569; margin-bottom:16px;">
+          쿠팡 파트너스 추천 ID(lptag)를 등록해주세요.
+        </div>
+        
+        <div style="background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.25); border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+          <div style="font-weight:700; color:#16a34a; margin-bottom:6px; font-size:13px;">✅ 이미 ID 발급받으셨다면</div>
+          <div style="font-size:12px; line-height:1.6; color:#475569;">
+            왼쪽 사이드바 → <b>⚙️ 설정</b> → <b>🛍️ 쿠팡 파트너스 본인 추천 ID</b> 카드 → ID 입력 → 저장
+          </div>
+        </div>
+        
+        <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:12px 14px; margin-bottom:18px;">
+          <div style="font-weight:700; color:#f59e0b; margin-bottom:6px; font-size:13px;">🆕 아직 ID 발급 못 받으셨다면</div>
+          <div style="font-size:12px; line-height:1.7; color:#475569;">
+            아래 버튼 차례로 누르세요:<br>
+            1. <b>📋 상품명 복사</b> → 클립보드에 상품명 저장<br>
+            2. <b>🏠 쿠팡 파트너스 사이트 가기</b> → 가입 / 로그인 → 검색란에 붙여넣기 → 직접 링크 발급
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="coupangModalCopyName" style="flex:1; min-width:140px; padding:11px; background:#3b82f6; color:white; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">📋 상품명 복사</button>
+          <button id="coupangModalGoPartners" style="flex:1; min-width:140px; padding:11px; background:linear-gradient(135deg,#f59e0b,#f97316); color:white; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">🏠 파트너스 가기</button>
+          <button id="coupangModalClose" style="flex:0.6; min-width:80px; padding:11px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;">닫기</button>
+        </div>
+      `;
+      
+      modal.appendChild(box);
+      document.body.appendChild(modal);
+      
+      // 모달 외부 클릭 → 닫기
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+      
+      // 버튼 이벤트
+      box.querySelector('#coupangModalCopyName').onclick = async (e) => {
+        await window.api.copyToClipboard(product.productName || '');
+        const b = e.currentTarget;
+        const orig = b.innerHTML;
+        b.innerHTML = '✅ 복사됨';
+        setTimeout(() => { b.innerHTML = orig; }, 1500);
+      };
+      box.querySelector('#coupangModalGoPartners').onclick = () => {
+        window.api.openExternalUrl('https://partners.coupang.com');
+      };
+      box.querySelector('#coupangModalClose').onclick = () => modal.remove();
+    }
+    
+    // 검색 실행
+    async function doSearch() {
+      const keyword = searchInput.value.trim();
+      if (!keyword) {
+        showStatus('검색어를 입력하세요', 'error');
+        return;
+      }
+      
+      searchBtn.disabled = true;
+      searchBtn.textContent = '⏳ 검색 중...';
+      resultsEl.innerHTML = '';
+      showStatus('🔍 검색 중...');
+      
+      try {
+        // 🆕 관리자 API 키 가져오기 (localStorage)
+        let adminApiKeys = null;
+        try {
+          const accessKey = localStorage.getItem('coupangAccessKey') || '';
+          const secretKey = localStorage.getItem('coupangSecretKey') || '';
+          
+          // 🐛 디버그 로그
+          console.log('[디버그 검색] 키 확인:');
+          console.log('  - Access Key:', accessKey ? `있음 (${accessKey.length}자, 시작: ${accessKey.substring(0,8)}...)` : '❌ 없음');
+          console.log('  - Secret Key:', secretKey ? `있음 (${secretKey.length}자)` : '❌ 없음');
+          
+          if (accessKey && secretKey) {
+            adminApiKeys = { accessKey, secretKey };
+            console.log('[디버그 검색] adminApiKeys 객체 생성됨 ✅');
+          } else {
+            console.warn('[디버그 검색] ⚠️ 키가 없어서 adminApiKeys = null');
+          }
+        } catch (e) {
+          console.error('[디버그 검색] localStorage 읽기 실패:', e);
+        }
+        
+        console.log('[디버그 검색] 검색어:', keyword);
+        console.log('[디버그 검색] payload:', { keyword, limit: 10, adminApiKeys: adminApiKeys ? '있음' : 'null' });
+        
+        // 검색 시 본인 ID 안 넘김 → 검색 결과 productUrl엔 마스터 lptag 박힘
+        // (상품 보러가기 = 대장 lptag 의도 충실)
+        const res = await window.api.coupangSearch({ keyword, limit: 10, adminApiKeys });
+        
+        // 🐛 디버그 로그 - 응답
+        console.log('[디버그 검색] 응답:', res);
+        
+        if (!res.success) {
+          throw new Error(res.error || '검색 실패');
+        }
+        
+        const products = res.products || [];
+        if (products.length === 0) {
+          showStatus(`"${keyword}" 검색 결과 없음`, 'error');
+        } else {
+          showStatus(`✅ ${products.length}개 상품 찾음 (쿠팡 API 최대 10개) — 다른 키워드로 더 검색 가능`, 'success');
+          products.forEach(p => resultsEl.appendChild(renderProductCard(p)));
+        }
+      } catch (err) {
+        console.error('[Coupang] 검색 오류:', err);
+        showStatus(err.message || '검색 실패', 'error');
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = '🔍 검색';
+      }
+    }
+    
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch();
+    });
+  })();
+
   // ===== 빌드 모드 감지 =====
   let buildInfo = { isTrial: false, limits: {} };
   (async () => {
@@ -8112,6 +9468,15 @@
             roleEl.textContent = '👑 관리자';
             roleEl.style.color = '#dc2626';
             roleEl.style.fontWeight = '700';
+            
+            // 🔒 관리자 캐시 (다음 실행 시 빠르게 표시)
+            try { localStorage.setItem('isAdmin', 'true'); } catch (e) {}
+            
+            // 🔒 관리자 전용 - 쿠팡 API 키 입력란 표시
+            const adminApiSection = document.getElementById('coupangApiKeysAdminSection');
+            if (adminApiSection) {
+              adminApiSection.style.display = 'block';
+            }
           } else {
             // 일반 사용자: tier에 따라 표시 (무료 등급 없음 - 체험판이 진입점)
             const tier = user.tier || 'trial';
@@ -8438,12 +9803,22 @@
       const coupangPartnersUrl = job.keyword
         ? `https://partners.coupang.com/#affiliate/ws/link?searchKeyword=${encodeURIComponent(job.keyword)}`
         : 'https://partners.coupang.com/#affiliate/ws/link';
+      
+      // 🔧 깨진 옛날 단축 링크 자동 수정 (link.coupang.com/re/AFFSDP?pageKey=키워드)
+      // 이런 옛날 링크는 깨져 있어서 키워드로 검색 페이지를 새로 만들어 사용
+      let safeCoupangLink = job.coupangLink;
+      if (safeCoupangLink && safeCoupangLink.includes('link.coupang.com/re/AFFSDP') && safeCoupangLink.includes('pageKey=')) {
+        // 깨진 옛날 형식 - 키워드로 검색 페이지 만들기
+        if (job.keyword) {
+          safeCoupangLink = `https://www.coupang.com/np/search?q=${encodeURIComponent(job.keyword)}&channel=user`;
+        }
+      }
 
-      const coupangSection = job.coupangLink ? `
+      const coupangSection = safeCoupangLink ? `
         <div class="job-history-coupang">
           <span>🛒</span>
-          <span class="job-history-coupang-link" title="${job.coupangLink}" style="flex:1;">${job.keyword || '관련 제품'}</span>
-          <button class="copy-link-btn" onclick="window.api.openExternalUrl ? window.api.openExternalUrl('${job.coupangLink}') : window.open('${job.coupangLink}', '_blank')">🛒 제품 보러가기</button>
+          <span class="job-history-coupang-link" title="${safeCoupangLink}" style="flex:1;">${job.keyword || '관련 제품'}</span>
+          <button class="copy-link-btn" onclick="window.api.openExternalUrl ? window.api.openExternalUrl('${safeCoupangLink}') : window.open('${safeCoupangLink}', '_blank')">🛒 제품 보러가기</button>
           <button class="copy-link-btn" style="background:#fff7ed; border-color:#f97316; color:#c2410c; margin-left:6px;" title="쿠팡 파트너스에서 단축 링크/배너 만들기 (로그인 필요)" onclick="window.api.openExternalUrl ? window.api.openExternalUrl('${coupangPartnersUrl}') : window.open('${coupangPartnersUrl}', '_blank')">🔗 링크 생성하러 가기</button>
         </div>
       ` : '';
@@ -10528,6 +11903,418 @@
         }
       }).catch(() => {});
     }
+  })();
+
+  // ===== 🔒 쿠팡 API 키 관리 (관리자 전용 입력란) =====
+  (function() {
+    // 🆕 관리자 캐시 즉시 적용 (authGetUser 기다리지 않음)
+    try {
+      if (localStorage.getItem('isAdmin') === 'true') {
+        const adminApiSection = document.getElementById('coupangApiKeysAdminSection');
+        if (adminApiSection) {
+          adminApiSection.style.display = 'block';
+          console.log('[관리자] 캐시로 API 키 입력란 즉시 표시');
+        }
+      }
+    } catch (e) {}
+    
+    const accessKeyInput = document.getElementById('coupangAccessKeyInput');
+    const secretKeyInput = document.getElementById('coupangSecretKeyInput');
+    const accessKeyHidden = document.getElementById('coupangAccessKey');     // 설정 저장용 hidden
+    const secretKeyHidden = document.getElementById('coupangSecretKey');     // 설정 저장용 hidden
+    
+    if (!accessKeyInput || !secretKeyInput) return;
+    
+    // 1) 저장된 키 로드 (페이지 열릴 때)
+    try {
+      // localStorage 우선, 없으면 hidden input 값 사용
+      let savedAccessKey = localStorage.getItem('coupangAccessKey') || '';
+      let savedSecretKey = localStorage.getItem('coupangSecretKey') || '';
+      
+      // hidden input에 값 있고 localStorage 비어있으면 → hidden input 값 사용 (설정 저장된 거)
+      if (!savedAccessKey && accessKeyHidden && accessKeyHidden.value) {
+        savedAccessKey = accessKeyHidden.value.trim();
+        localStorage.setItem('coupangAccessKey', savedAccessKey);
+      }
+      if (!savedSecretKey && secretKeyHidden && secretKeyHidden.value) {
+        savedSecretKey = secretKeyHidden.value.trim();
+        localStorage.setItem('coupangSecretKey', savedSecretKey);
+      }
+      
+      // input에 표시
+      accessKeyInput.value = savedAccessKey;
+      secretKeyInput.value = savedSecretKey;
+      
+      // hidden input에도 동기화 (설정 저장 시 같이 저장됨)
+      if (accessKeyHidden) accessKeyHidden.value = savedAccessKey;
+      if (secretKeyHidden) secretKeyHidden.value = savedSecretKey;
+      
+      console.log('[관리자] API 키 로드됨:', 
+        savedAccessKey ? '✅ Access Key 있음 (' + savedAccessKey.length + '자)' : '⚠️ Access Key 없음',
+        '/',
+        savedSecretKey ? '✅ Secret Key 있음 (' + savedSecretKey.length + '자)' : '⚠️ Secret Key 없음'
+      );
+    } catch (e) {
+      console.warn('[관리자] API 키 로드 실패:', e);
+    }
+    
+    // 2) 입력 시 자동 저장 (input 이벤트 - 실시간)
+    accessKeyInput.addEventListener('input', function() {
+      try {
+        const val = accessKeyInput.value.trim();
+        localStorage.setItem('coupangAccessKey', val);
+        if (accessKeyHidden) accessKeyHidden.value = val;  // hidden도 동기화
+        console.log('[관리자] Access Key 저장됨 (' + val.length + '자)');
+      } catch (e) {}
+    });
+    
+    accessKeyInput.addEventListener('change', function() {
+      try {
+        const val = accessKeyInput.value.trim();
+        localStorage.setItem('coupangAccessKey', val);
+        if (accessKeyHidden) accessKeyHidden.value = val;
+      } catch (e) {}
+    });
+    
+    secretKeyInput.addEventListener('input', function() {
+      try {
+        const val = secretKeyInput.value.trim();
+        localStorage.setItem('coupangSecretKey', val);
+        if (secretKeyHidden) secretKeyHidden.value = val;
+        console.log('[관리자] Secret Key 저장됨 (' + val.length + '자)');
+      } catch (e) {}
+    });
+    
+    secretKeyInput.addEventListener('change', function() {
+      try {
+        const val = secretKeyInput.value.trim();
+        localStorage.setItem('coupangSecretKey', val);
+        if (secretKeyHidden) secretKeyHidden.value = val;
+      } catch (e) {}
+    });
+  })();
+
+  // ===== 🛍️ 쿠팡 제품 표시 시스템 (사이드바) =====
+  (function() {
+    var productList = document.getElementById('coupangProductList');
+    if (!productList) return;  // 안전망
+    
+    var selectedSection = document.getElementById('selectedProductSection');
+    var selectedPreview = document.getElementById('selectedProductPreview');
+    var selectedViewBtn = document.getElementById('selectedViewBtn');
+    var selectedLinkBtn = document.getElementById('selectedLinkBtn');
+    
+    var currentProduct = null;
+    
+    // 더미 상품 5개 (테스트용)
+    var dummyProducts = [
+      { productName: '무선 청소기 2024 신제품', productPrice: 89900, productUrl: 'https://coupang.com/1' },
+      { productName: '가성비 블루투스 이어폰', productPrice: 24900, productUrl: 'https://coupang.com/2' },
+      { productName: '스마트폰 무선충전패드', productPrice: 15900, productUrl: 'https://coupang.com/3' },
+      { productName: '프리미엄 향수 선물세트', productPrice: 45900, productUrl: 'https://coupang.com/4' },
+      { productName: '홈카페 원두커피 10종', productPrice: 32900, productUrl: 'https://coupang.com/5' }
+    ];
+    
+    function createProductCard(product, index) {
+      var card = document.createElement('div');
+      card.style.background = 'var(--bg-card)';
+      card.style.border = '1px solid var(--line)';
+      card.style.borderRadius = '8px';
+      card.style.padding = '12px';
+      card.style.marginBottom = '8px';
+      card.style.cursor = 'pointer';
+      card.style.display = 'flex';
+      card.style.gap = '12px';
+      card.style.transition = 'all 0.2s';
+      
+      // 이미지 박스
+      var imgBox = document.createElement('div');
+      imgBox.style.width = '80px';
+      imgBox.style.height = '80px';
+      imgBox.style.background = '#f8f9fa';
+      imgBox.style.borderRadius = '6px';
+      imgBox.style.flexShrink = '0';
+      imgBox.style.display = 'flex';
+      imgBox.style.alignItems = 'center';
+      imgBox.style.justifyContent = 'center';
+      imgBox.style.overflow = 'hidden';
+      
+      // 🆕 실제 이미지 URL 있으면 img 태그, 없으면 이모지
+      if (product.productImage) {
+        var imgEl = document.createElement('img');
+        imgEl.src = product.productImage;
+        imgEl.style.maxWidth = '100%';
+        imgEl.style.maxHeight = '100%';
+        imgEl.style.objectFit = 'contain';
+        // 이미지 로드 실패 시 이모지로 대체
+        imgEl.onerror = function() {
+          imgBox.removeChild(imgEl);
+          imgBox.style.fontSize = '28px';
+          imgBox.textContent = '🛍️';
+        };
+        imgBox.appendChild(imgEl);
+      } else {
+        imgBox.style.fontSize = '28px';
+        imgBox.textContent = '🛍️';
+      }
+      
+      card.appendChild(imgBox);
+      
+      // 정보
+      var info = document.createElement('div');
+      info.style.flex = '1';
+      info.style.display = 'flex';
+      info.style.flexDirection = 'column';
+      info.style.justifyContent = 'space-between';
+      info.style.minWidth = '0';
+      
+      var name = document.createElement('div');
+      name.style.fontSize = '13px';
+      name.style.fontWeight = '600';
+      name.style.color = 'var(--text)';
+      name.style.lineHeight = '1.3';
+      name.style.marginBottom = '4px';
+      name.textContent = product.productName || '';
+      info.appendChild(name);
+      
+      var price = document.createElement('div');
+      price.style.fontSize = '14px';
+      price.style.fontWeight = '800';
+      price.style.color = '#f59e0b';
+      price.textContent = product.productPrice 
+        ? product.productPrice.toLocaleString('ko-KR') + '원' 
+        : '';
+      info.appendChild(price);
+      
+      card.appendChild(info);
+      
+      // 클릭 이벤트
+      card.onclick = function() { selectProduct(product, card); };
+      
+      // 호버 효과
+      card.onmouseenter = function() {
+        if (currentProduct !== product) {
+          card.style.borderColor = '#f59e0b';
+        }
+      };
+      card.onmouseleave = function() {
+        if (currentProduct !== product) {
+          card.style.borderColor = 'var(--line)';
+        }
+      };
+      
+      return card;
+    }
+    
+    function selectProduct(product, cardEl) {
+      currentProduct = product;
+      
+      // 모든 카드 선택 해제
+      var allCards = productList.children;
+      for (var i = 0; i < allCards.length; i++) {
+        if (allCards[i].style) {
+          allCards[i].style.borderColor = 'var(--line)';
+        }
+      }
+      
+      // 현재 카드 선택 표시
+      cardEl.style.borderColor = '#f59e0b';
+      
+      // 미리보기 업데이트
+      if (!selectedPreview || !selectedSection) return;
+      
+      selectedPreview.innerHTML = '';
+      
+      var wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.alignItems = 'center';
+      wrap.style.gap = '12px';
+      wrap.style.width = '100%';
+      
+      var pImg = document.createElement('div');
+      pImg.style.width = '60px';
+      pImg.style.height = '60px';
+      pImg.style.background = '#f8f9fa';
+      pImg.style.borderRadius = '6px';
+      pImg.style.flexShrink = '0';
+      pImg.style.display = 'flex';
+      pImg.style.alignItems = 'center';
+      pImg.style.justifyContent = 'center';
+      pImg.style.overflow = 'hidden';
+      
+      // 🆕 실제 이미지 URL 있으면 img 태그
+      if (product.productImage) {
+        var pImgEl = document.createElement('img');
+        pImgEl.src = product.productImage;
+        pImgEl.style.maxWidth = '100%';
+        pImgEl.style.maxHeight = '100%';
+        pImgEl.style.objectFit = 'contain';
+        pImgEl.onerror = function() {
+          pImg.removeChild(pImgEl);
+          pImg.style.fontSize = '24px';
+          pImg.textContent = '🛍️';
+        };
+        pImg.appendChild(pImgEl);
+      } else {
+        pImg.style.fontSize = '24px';
+        pImg.textContent = '🛍️';
+      }
+      
+      wrap.appendChild(pImg);
+      
+      var pInfo = document.createElement('div');
+      pInfo.style.flex = '1';
+      pInfo.style.minWidth = '0';
+      
+      var pName = document.createElement('div');
+      pName.style.fontSize = '12px';
+      pName.style.fontWeight = '600';
+      pName.style.marginBottom = '4px';
+      pName.textContent = product.productName || '';
+      pInfo.appendChild(pName);
+      
+      var pPrice = document.createElement('div');
+      pPrice.style.fontSize = '13px';
+      pPrice.style.fontWeight = '800';
+      pPrice.style.color = '#f59e0b';
+      pPrice.textContent = product.productPrice 
+        ? product.productPrice.toLocaleString('ko-KR') + '원' 
+        : '';
+      pInfo.appendChild(pPrice);
+      
+      wrap.appendChild(pInfo);
+      selectedPreview.appendChild(wrap);
+      
+      selectedSection.style.display = 'block';
+    }
+    
+    // 상품보기 버튼
+    if (selectedViewBtn) {
+      selectedViewBtn.onclick = function() {
+        if (currentProduct && currentProduct.productUrl && window.api && window.api.openExternalUrl) {
+          window.api.openExternalUrl(currentProduct.productUrl);
+        }
+      };
+    }
+    
+    // 링크만들기 버튼 - 실제 쿠팡 딥링크 발급
+    if (selectedLinkBtn) {
+      selectedLinkBtn.onclick = async function() {
+        if (!currentProduct) {
+          alert('먼저 상품을 선택하세요.');
+          return;
+        }
+        
+        if (!currentProduct.productUrl) {
+          alert('상품 URL이 없습니다.');
+          return;
+        }
+        
+        // 본인 추천 ID 가져오기
+        var userLptag = '';
+        try {
+          var partnerCodeInput = document.getElementById('coupangPartnerCode');
+          if (partnerCodeInput) userLptag = partnerCodeInput.value.trim();
+          if (!userLptag) {
+            userLptag = localStorage.getItem('coupangPartnerCode') || '';
+          }
+        } catch (e) {}
+        
+        // 본인 ID 미등록 시 안내
+        if (!userLptag) {
+          var goSettings = confirm(
+            '⚠️ 쿠팡 파트너스 본인 추천 ID가 등록되지 않았습니다.\n\n' +
+            '⚙️ 설정 → 🛍️ 쿠팡 파트너스 본인 추천 ID에서 등록해주세요.\n\n' +
+            '지금 설정 페이지로 이동할까요?'
+          );
+          if (goSettings) {
+            var settingsLink = document.getElementById('settingsLink');
+            if (settingsLink) settingsLink.click();
+          }
+          return;
+        }
+        
+        // 발급 시작
+        var originalText = selectedLinkBtn.innerHTML;
+        selectedLinkBtn.disabled = true;
+        selectedLinkBtn.innerHTML = '⏳ 발급중';
+        
+        try {
+          if (!window.api || !window.api.coupangDeeplink) {
+            throw new Error('API를 사용할 수 없습니다');
+          }
+          
+          // 🆕 관리자 API 키 가져오기 (localStorage)
+          var adminApiKeys = null;
+          try {
+            var accessKey = localStorage.getItem('coupangAccessKey') || '';
+            var secretKey = localStorage.getItem('coupangSecretKey') || '';
+            if (accessKey && secretKey) {
+              adminApiKeys = { accessKey: accessKey, secretKey: secretKey };
+            }
+          } catch (e) {}
+          
+          var result = await window.api.coupangDeeplink({
+            productUrl: currentProduct.productUrl,
+            subId: userLptag,
+            userLptag: userLptag,
+            adminApiKeys: adminApiKeys,
+          });
+          
+          if (!result || !result.success) {
+            throw new Error((result && result.error) || '링크 발급 실패');
+          }
+          
+          var link = result.shortenUrl || result.landingUrl;
+          
+          // 클립보드 복사
+          if (window.api.copyToClipboard) {
+            await window.api.copyToClipboard(link);
+          }
+          
+          selectedLinkBtn.innerHTML = '✅ 복사됨!';
+          alert('✅ 링크 발급 완료!\n클립보드에 복사되었습니다.\n\n' + link);
+          
+          setTimeout(function() {
+            selectedLinkBtn.innerHTML = originalText;
+            selectedLinkBtn.disabled = false;
+          }, 2500);
+        } catch (err) {
+          console.error('[사이드바 링크만들기] 오류:', err);
+          selectedLinkBtn.innerHTML = '❌ 실패';
+          alert('링크 발급 실패: ' + (err.message || '알 수 없는 오류'));
+          setTimeout(function() {
+            selectedLinkBtn.innerHTML = originalText;
+            selectedLinkBtn.disabled = false;
+          }, 2000);
+        }
+      };
+    }
+    
+    // 검색 전에는 더미 상품 표시 안 함 (안내문구만 유지)
+    // setTimeout으로 자동 로드하던 코드 제거됨
+    // 메인 화면에서 영상을 만들거나 검색하면 window.updateCoupangProducts()로 표시
+    
+    // 외부에서 호출 가능 (실제 데이터 업데이트용)
+    window.updateCoupangProducts = function(products) {
+      if (!productList) return;
+      productList.innerHTML = '';
+      
+      if (!products || products.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.style.fontSize = '11px';
+        empty.style.color = 'var(--text-dim)';
+        empty.innerHTML = '메인 화면에서 영상을 만들면<br>관련 제품이 여기에 표시됩니다.';
+        productList.appendChild(empty);
+        if (selectedSection) selectedSection.style.display = 'none';
+        return;
+      }
+      
+      for (var i = 0; i < products.length; i++) {
+        productList.appendChild(createProductCard(products[i], i));
+      }
+    };
   })();
   
 </script>

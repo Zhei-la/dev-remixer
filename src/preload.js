@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('api', {
   openWorkFolder: () => ipcRenderer.invoke('open-work-folder'),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
+
+  // 🆕 쿠팡 파트너스 검색/링크 발급
+  coupangSearch: (payload) => ipcRenderer.invoke('coupang-search', payload),
+  coupangDeeplink: (payload) => ipcRenderer.invoke('coupang-deeplink', payload),
   getVideoDuration: (filePath) => ipcRenderer.invoke('get-video-duration', filePath),
   getUrlVideoDuration: (url) => ipcRenderer.invoke('get-url-video-duration', url),
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),

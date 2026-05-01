@@ -2,19 +2,10 @@
 
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 const axios = require('axios');
 const FormData = require('form-data');
-
-// ========================================================================
-// 🔒 [관리자 전용] 쿠팡 파트너스 lptag
-// ------------------------------------------------------------------------
-// 이 값을 한 번만 채워 넣으면 모든 유저의 "제품 보러가기" 클릭이
-// 관리자(제일라) 파트너스 링크로 전부 트래킹됩니다.
-// 유저 UI에는 이 값을 입력받는 필드가 없습니다.
-// 빈 문자열이면 일반 쿠팡 검색 페이지로 연결됩니다 (수수료 X).
-const ADMIN_COUPANG_LPTAG = 'AF5722914'; // ← 관리자(제일라) lptag
-// ========================================================================
 
 // ===== 지원 언어 정의 =====
 const LANGUAGES = {
@@ -564,81 +555,7 @@ async function extractAudio(videoPath, audioPath, onProgress, config = {}) {
 }
 
 // ===== 3단계: Groq Whisper STT =====
-// 🆕 OpenAI Whisper fallback (Groq 실패 시 자동 전환용)
-async function transcribeAudioOpenAI(audioPath, sourceLang, openaiApiKey, onProgress) {
-  onProgress('stt', 30, '음성 인식 중 (OpenAI Whisper로 전환)...');
-
-  console.log('[Whisper REQUEST]', {
-    provider: 'OpenAI',
-    model: 'whisper-1',
-    hasApiKey: !!openaiApiKey,
-    apiKeyPrefix: openaiApiKey ? openaiApiKey.substring(0, 7) + '...' : '(없음)',
-  });
-
-  const form = new FormData();
-  form.append('file', fs.createReadStream(audioPath));
-  form.append('model', 'whisper-1');
-  form.append('response_format', 'verbose_json');
-  form.append('temperature', '0');
-  if (sourceLang && sourceLang !== 'auto' && LANGUAGES[sourceLang]) {
-    form.append('language', LANGUAGES[sourceLang].whisper);
-  }
-
-  try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/audio/transcriptions',
-      form,
-      {
-        headers: { ...form.getHeaders(), Authorization: `Bearer ${openaiApiKey}` },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: 240000, // OpenAI는 4분 타임아웃 (Groq보다 약간 느림)
-      }
-    );
-
-    const segments = response.data.segments || [];
-    console.log(`[Whisper-OpenAI] 인식 완료: ${segments.length}개 세그먼트, 언어: ${response.data.language}`);
-
-    return {
-      text: response.data.text,
-      language: response.data.language,
-      segments: segments,
-      duration: response.data.duration,
-    };
-  } catch (error) {
-    const status = error.response?.status;
-    const code = error.response?.data?.error?.code || error.code;
-    const message = error.response?.data?.error?.message || error.message || '';
-    console.error('[Whisper-OpenAI RAW ERROR]', { status, code, message });
-
-    let friendlyMsg;
-    if (status === 401) {
-      friendlyMsg = '❌ OpenAI API 키가 잘못되었거나 만료되었습니다.\n💡 해결: 좌측 메뉴 → 설정 → API 키 → OpenAI API Key를 새로 입력하고 저장 후 앱 재시작\n🔗 키 발급: https://platform.openai.com/api-keys';
-    } else if (status === 402 || code === 'insufficient_quota') {
-      friendlyMsg = '❌ OpenAI 크레딧이 부족합니다.\n💡 해결: OpenAI 결제 페이지에서 크레딧 충전\n🔗 https://platform.openai.com/account/billing';
-    } else if (status === 429) {
-      friendlyMsg = '❌ OpenAI 요청 한도 도달 (분당 호출 너무 많음).\n💡 해결: 5~10분 후 재시도';
-    } else if (status === 400) {
-      friendlyMsg = `❌ OpenAI Whisper 요청 오류.\n💡 해결: 영상 파일이 손상됐거나 너무 길 수 있습니다. 다른 영상으로 시도.\n📋 상세: ${message}`;
-    } else if (!status) {
-      friendlyMsg = '❌ OpenAI 서버 연결 실패 (네트워크).\n💡 해결: 인터넷 연결/VPN/방화벽 확인';
-    } else {
-      friendlyMsg = `❌ OpenAI Whisper 오류 (코드 ${status}): ${message}\n💡 해결: 잠시 후 재시도`;
-    }
-    const enrichedError = new Error(friendlyMsg);
-    enrichedError.status = status;
-    throw enrichedError;
-  }
-}
-
-async function transcribeAudio(audioPath, sourceLang, configOrGroqKey, onProgress, maxRetries = 3) {
-  // 🆕 후방호환: 두 번째 매개변수가 string이면 groqApiKey만 받는 옛날 호출, object면 config 전체
-  const config = typeof configOrGroqKey === 'string'
-    ? { groqApiKey: configOrGroqKey }
-    : (configOrGroqKey || {});
-  const groqApiKey = config.groqApiKey;
-  const openaiApiKey = config.openaiApiKey;
-
+async function transcribeAudio(audioPath, sourceLang, groqApiKey, onProgress, maxRetries = 6) {
   onProgress('stt', 30, '음성 인식 중 (Whisper)...');
 
   // 오디오 파일 정보 로그
@@ -646,14 +563,6 @@ async function transcribeAudio(audioPath, sourceLang, configOrGroqKey, onProgres
     const stats = fs.statSync(audioPath);
     console.log(`[Whisper] 오디오 파일: ${audioPath}, 크기: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
   } catch (e) {}
-
-  // 🆕 요청 직전 진단 로그
-  console.log('[Whisper REQUEST]', {
-    provider: 'Groq',
-    model: 'whisper-large-v3-turbo',
-    hasApiKey: !!groqApiKey,
-    apiKeyPrefix: groqApiKey ? groqApiKey.substring(0, 7) + '...' : '(없음)',
-  });
 
   let lastError;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -695,86 +604,21 @@ async function transcribeAudio(audioPath, sourceLang, configOrGroqKey, onProgres
     } catch (error) {
       lastError = error;
       const status = error.response?.status;
-      const code = error.response?.data?.error?.code || error.code;
-      const message = error.response?.data?.error?.message || error.message || '';
-
-      // 🆕 진짜 에러 정보 콘솔에 출력
-      console.error('[Whisper RAW ERROR]', { status, code, message, attempt: attempt + 1 });
-
-      // 🆕 재시도 가능: 429 (rate limit) 또는 5xx (서버 오류)만
-      const retryable = status === 429 || (status >= 500 && status < 600);
-
-      // 🆕 Groq 실패 → OpenAI Whisper로 자동 fallback (OpenAI 키 있을 때만)
-      // - 401/402/403/429: Groq 키/한도 문제 → OpenAI 시도
-      // - 5xx: Groq 서버 문제 → OpenAI 시도
-      // - 400: 오디오 자체 문제라 OpenAI 가도 똑같이 실패 → fallback X
-      const shouldFallback = openaiApiKey && (
-        status === 401 || status === 402 || status === 403 || status === 429 ||
-        (status >= 500 && status < 600) ||
-        code === 'insufficient_quota'
-      );
-
-      if (shouldFallback) {
-        console.warn(`[Whisper] Groq 실패 (${status}) → OpenAI Whisper로 자동 전환`);
-        try {
-          return await transcribeAudioOpenAI(audioPath, sourceLang, openaiApiKey, onProgress);
-        } catch (openaiError) {
-          console.error('[Whisper] OpenAI fallback도 실패:', openaiError.message);
-          // OpenAI도 실패 → 두 에러 모두 보여주는 메시지로 throw
-          const combinedMsg = `❌ Groq + OpenAI 둘 다 실패\n\n[Groq 오류]\n${(error.response?.data?.error?.message || error.message || '코드 ' + status)}\n\n[OpenAI 오류]\n${openaiError.message}`;
-          const finalErr = new Error(combinedMsg);
-          finalErr.status = status;
-          throw finalErr;
-        }
-      }
-
-      if (!retryable) {
-        // 🆕 401/402/403/400 등 즉시 친절한 메시지로 throw (재시도 X, fallback도 없음)
-        let friendlyMsg;
-        if (status === 401) {
-          friendlyMsg = '❌ Groq API 키가 잘못되었거나 만료되었습니다.\n💡 해결: 좌측 메뉴 → 설정 → API 키 → Groq API Key를 새로 입력하고 저장 후 앱을 재시작해주세요.\n🔗 키 발급: https://console.groq.com/keys\n\n💡 또는 OpenAI Whisper로 자동 전환하려면 OpenAI API Key도 입력해두세요.';
-        } else if (status === 402 || code === 'insufficient_quota') {
-          friendlyMsg = '❌ Groq 무료 사용량을 초과했거나 크레딧이 부족합니다.\n💡 해결: ① 1시간~24시간 후 재시도 (무료 플랜은 일/시간 단위로 리셋됨)\n② 또는 Groq 유료 플랜 결제 후 다시 시도\n③ OpenAI API Key를 입력하면 자동 fallback 가능\n🔗 사용량 확인: https://console.groq.com/settings/billing';
-        } else if (status === 403) {
-          friendlyMsg = '❌ Groq Whisper 모델에 접근 권한이 없습니다.\n💡 해결: ① Groq API 키가 Whisper 권한을 가졌는지 확인\n② 또는 새 API 키를 발급받아 다시 시도\n③ OpenAI API Key를 입력하면 자동 fallback 가능\n🔗 https://console.groq.com/keys';
-        } else if (status === 400) {
-          friendlyMsg = `❌ 오디오 파일에 문제가 있습니다 (요청 형식 오류).\n💡 해결: ① 영상 파일이 깨졌는지 확인\n② 영상 길이가 너무 길지 않은지 확인 (긴 영상은 잘라서 시도)\n③ 다른 영상으로 테스트\n📋 상세: ${message || '알 수 없음'}`;
-        } else if (typeof message === 'string' && message.toLowerCase().includes('timeout')) {
-          friendlyMsg = '❌ Groq 서버 응답 시간이 초과됐습니다.\n💡 해결: ① 인터넷 연결 확인\n② 영상이 너무 길면 짧은 영상으로 시도\n③ 잠시 후 재시도\n④ OpenAI API Key 입력 시 자동 fallback';
-        } else if (!status) {
-          friendlyMsg = `❌ Groq 서버에 연결할 수 없습니다 (네트워크 오류).\n💡 해결: ① 인터넷 연결 확인\n② VPN 사용 중이면 끄고 시도\n③ 방화벽/프록시 설정 확인\n📋 상세: ${message || '알 수 없음'}`;
+      if (status === 429 || (status >= 500 && status < 600)) {
+        const retryAfter = error.response?.headers?.['retry-after'];
+        let waitSec;
+        if (retryAfter) {
+          waitSec = parseFloat(retryAfter) + 2;
         } else {
-          friendlyMsg = `❌ Groq Whisper 오류 (코드 ${status}): ${message || '알 수 없음'}\n💡 해결: 잠시 후 다시 시도하거나, Groq API 키를 새로 발급받아 시도해주세요.\n💡 OpenAI API Key 입력 시 자동 fallback`;
+          const waitTable = [10, 20, 40, 60, 90, 90];
+          waitSec = waitTable[Math.min(attempt, waitTable.length - 1)];
         }
-        const enrichedError = new Error(friendlyMsg);
-        enrichedError.status = status;
-        enrichedError.originalError = error;
-        throw enrichedError;
+        const waitMs = Math.min(waitSec * 1000, 120000);
+        onProgress('stt', 30, `Groq 한도 대기 중 (${waitSec}초)... ${attempt + 1}/${maxRetries}`);
+        await sleep(waitMs);
+        continue;
       }
-
-      // 마지막 시도까지 실패면 친절한 메시지로 throw
-      if (attempt === maxRetries - 1) {
-        const finalMsg = status === 429
-          ? `❌ Groq 무료 사용량 한도 초과 (${maxRetries}번 재시도해도 동일).\n💡 해결: ① 1시간~24시간 후 재시도 (무료 플랜은 시간/일 단위로 리셋)\n② 또는 Groq 유료 플랜 결제\n③ OpenAI API Key 입력 시 자동 fallback\n🔗 https://console.groq.com/settings/billing`
-          : `❌ Groq 서버 오류 (코드 ${status}).\n💡 해결: 잠시 후 (5~10분) 다시 시도해주세요. Groq 서버 일시 장애일 수 있습니다.\n💡 OpenAI API Key 입력 시 자동 fallback`;
-        const enrichedError = new Error(finalMsg);
-        enrichedError.status = status;
-        throw enrichedError;
-      }
-
-      // 🆕 429/5xx 재시도: retry-after 헤더 우선, 없으면 짧은 지수 백오프
-      const retryAfter = error.response?.headers?.['retry-after'];
-      let waitSec;
-      if (retryAfter) {
-        waitSec = Math.min(parseFloat(retryAfter) + 1, 30); // 최대 30초로 제한
-      } else {
-        // 짧은 지수 백오프 (이전: [10, 20, 40, 60, 90, 90] → 폭주 원인)
-        waitSec = Math.min(Math.pow(2, attempt) * 2, 10); // 2s, 4s, 8s
-      }
-      const reasonMsg = status === 429 ? '요청 한도' : `서버 오류(${status})`;
-      onProgress('stt', 30, `Groq Whisper ${reasonMsg} 대기 중 (${waitSec}초)... ${attempt + 1}/${maxRetries}`);
-      console.log(`[Whisper ${reasonMsg}] ${waitSec}초 대기 후 재시도 (${attempt + 1}/${maxRetries})`);
-      await sleep(waitSec * 1000);
+      throw error;
     }
   }
   throw lastError;
@@ -873,58 +717,7 @@ const LLM_PROVIDERS = {
 };
 
 // ===== 통합 LLM 호출 (자동 재시도 + Rate limit 대응) =====
-// 🆕 LLM API 에러 메시지 분류 (OpenAI/Groq/Claude/Gemini 공통)
-function getLLMErrorMessage(err, providerName) {
-  const status = err?.response?.status || err?.status;
-  const code = err?.response?.data?.error?.code || err?.error?.code || err?.code;
-  const message = err?.response?.data?.error?.message || err?.error?.message || err?.message || '';
-
-  console.error(`[${providerName} ERROR]`, { status, code, message });
-
-  // 키 발급 URL 매핑
-  const keyUrls = {
-    'Groq (무료, 빠름)': 'https://console.groq.com/keys',
-    'OpenAI (GPT)': 'https://platform.openai.com/api-keys',
-    'Anthropic (Claude)': 'https://console.anthropic.com/settings/keys',
-    'Google Gemini': 'https://aistudio.google.com/app/apikey',
-  };
-  const keyUrl = keyUrls[providerName] || '';
-  const billingUrls = {
-    'Groq (무료, 빠름)': 'https://console.groq.com/settings/billing',
-    'OpenAI (GPT)': 'https://platform.openai.com/account/billing',
-    'Anthropic (Claude)': 'https://console.anthropic.com/settings/billing',
-    'Google Gemini': 'https://aistudio.google.com/app/apikey',
-  };
-  const billingUrl = billingUrls[providerName] || '';
-
-  if (status === 401) {
-    return `❌ ${providerName} API 키가 잘못되었거나 만료되었습니다.\n💡 해결: 좌측 메뉴 → 설정 → API 키에서 ${providerName} 키를 새로 입력하고 저장 → 앱 재시작\n🔗 키 발급: ${keyUrl}`;
-  }
-  if (status === 402 || code === 'insufficient_quota') {
-    return `❌ ${providerName} 무료 사용량을 초과했거나 크레딧이 부족합니다.\n💡 해결: ① 1시간~24시간 후 재시도 (무료 플랜은 자동 리셋)\n② 또는 결제하고 다시 시도\n🔗 결제/사용량: ${billingUrl}`;
-  }
-  if (status === 403) {
-    return `❌ ${providerName} API 키로 이 모델을 사용할 권한이 없습니다.\n💡 해결: ① 설정 → 모델명을 기본값으로 되돌리기\n② 또는 새 API 키 발급\n🔗 ${keyUrl}`;
-  }
-  if (status === 429) {
-    return `❌ ${providerName} 요청 한도에 도달했습니다 (잠깐 너무 자주 호출).\n💡 해결: ① 5~10분 기다린 후 재시도\n② 또는 다른 LLM Provider로 변경 (설정 → 번역에 사용할 LLM)`;
-  }
-  if (status === 400) {
-    return `❌ ${providerName} 요청 형식 오류.\n💡 해결: ① 설정 → 모델명을 비우고 기본값 사용\n② 또는 다른 LLM Provider로 변경\n📋 상세: ${message || '알 수 없음'}`;
-  }
-  if (status >= 500) {
-    return `❌ ${providerName} 서버 일시 장애 (코드 ${status}).\n💡 해결: 5~10분 후 다시 시도해주세요. 계속 안 되면 다른 LLM Provider로 변경.`;
-  }
-  if (typeof message === 'string' && message.toLowerCase().includes('timeout')) {
-    return `❌ ${providerName} 응답 시간 초과.\n💡 해결: ① 인터넷 연결 확인\n② 대본/프롬프트가 너무 길면 짧게 하기\n③ 잠시 후 재시도`;
-  }
-  if (!status) {
-    return `❌ ${providerName} 서버에 연결할 수 없습니다 (네트워크 문제).\n💡 해결: ① 인터넷 연결 확인\n② VPN 사용 중이면 끄고 시도\n③ 방화벽/프록시 설정 확인\n📋 상세: ${message || '알 수 없음'}`;
-  }
-  return `❌ ${providerName} 오류 (코드 ${status}): ${message || '알 수 없음'}\n💡 해결: 잠시 후 재시도하거나 API 키 재발급. 계속 안 되면 다른 Provider로 변경.`;
-}
-
-async function callLLM(messages, config, maxRetries = 3) {
+async function callLLM(messages, config, maxRetries = 8) {
   const providerKey = config.llmProvider || 'groq';
   const provider = LLM_PROVIDERS[providerKey];
   if (!provider) throw new Error(`알 수 없는 LLM provider: ${providerKey}`);
@@ -939,19 +732,7 @@ async function callLLM(messages, config, maxRetries = 3) {
     ? provider.getEndpoint(model, apiKey)
     : provider.endpoint;
 
-  // 🆕 요청 직전 진단 로그 (어느 provider/model로 가는지 확인)
-  console.log('[LLM REQUEST]', {
-    provider: provider.name,
-    providerKey,
-    model,
-    hasApiKey: !!apiKey,
-    apiKeyPrefix: apiKey ? apiKey.substring(0, 7) + '...' : '(없음)',
-    messagesCount: messages?.length,
-    promptLength: messages?.[0]?.content?.length || 0,
-  });
-
   let lastError;
-  // 🆕 최대 재시도 3회 (이전 8회 → 폭주 방지)
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const response = await axios.post(endpoint, payload, { headers });
@@ -959,44 +740,27 @@ async function callLLM(messages, config, maxRetries = 3) {
     } catch (error) {
       lastError = error;
       const status = error.response?.status;
-
-      // 🆕 재시도 가능: 429 (rate limit) 또는 5xx (서버 오류)만
-      const retryable = status === 429 || (status >= 500 && status < 600);
-
-      if (!retryable) {
-        // 🆕 401/402/403/400 등 → 즉시 친절한 에러 메시지로 throw (재시도 X)
-        const friendlyMsg = getLLMErrorMessage(error, provider.name);
-        const enrichedError = new Error(friendlyMsg);
-        enrichedError.status = status;
-        enrichedError.originalError = error;
-        throw enrichedError;
+      if (status === 429 || (status >= 500 && status < 600)) {
+        // Rate limit 재시도 전략:
+        // retry-after 헤더가 있으면 그 시간만큼 대기
+        // 없으면 점진적 증가: 10s, 20s, 40s, 60s, 90s, 90s, 90s, 90s
+        const retryAfter = error.response?.headers?.['retry-after'];
+        let waitSec;
+        if (retryAfter) {
+          waitSec = parseFloat(retryAfter) + 2; // retry-after + 2초 여유
+        } else {
+          // 점진적 증가
+          const waitTable = [10, 20, 40, 60, 90, 90, 90, 90];
+          waitSec = waitTable[Math.min(attempt, waitTable.length - 1)];
+        }
+        const waitMs = Math.min(waitSec * 1000, 120000); // 최대 2분
+        console.log(`[LLM 429] ${waitSec}초 대기 후 재시도... (${attempt + 1}/${maxRetries})`);
+        await sleep(waitMs);
+        continue;
       }
-
-      // 마지막 시도까지 실패면 친절한 메시지로 throw
-      if (attempt === maxRetries - 1) {
-        const friendlyMsg = getLLMErrorMessage(error, provider.name);
-        const enrichedError = new Error(friendlyMsg);
-        enrichedError.status = status;
-        enrichedError.originalError = error;
-        throw enrichedError;
-      }
-
-      // 429/5xx 재시도: retry-after 헤더 우선, 없으면 지수 백오프 (최대 8초)
-      const retryAfter = error.response?.headers?.['retry-after'];
-      let waitSec;
-      if (retryAfter) {
-        waitSec = Math.min(parseFloat(retryAfter) + 1, 30); // retry-after 최대 30초로 제한
-      } else {
-        // 🆕 지수 백오프: 1s, 2s, 4s (이전 10s, 20s, 40s, 60s... → 폭주 방지)
-        waitSec = Math.min(Math.pow(2, attempt), 8);
-      }
-      const reasonMsg = status === 429 ? '요청 한도' : `서버 오류(${status})`;
-      console.log(`[LLM ${reasonMsg}] ${waitSec}초 대기 후 재시도 (${attempt + 1}/${maxRetries})`);
-      await sleep(waitSec * 1000);
+      throw error;
     }
   }
-
-  // 안전망: 위에서 throw됐어야 함
   throw lastError;
 }
 
@@ -1797,12 +1561,10 @@ async function generateReactionScript(originalText, videoDurationSec, visionDesc
 
   const targetLangName = LANGUAGES[targetLang]?.name || '한국어';
   const cps = getCharsPerSecond(targetLang);
-  // 🔴 영상 길이 정확하게 맞춤 (TTS rate +15% 감안 → 실제 cps * 1.15)
-  const actualCps = cps * 1.15;
-  const targetChars = Math.floor((videoDurationSec - 0.5) * actualCps * 0.95);
-  const minChars = Math.floor((videoDurationSec - 0.5) * actualCps * 0.85);
-  // 🆕 영상 길이 절대 초과 금지 (1.15 → 1.0)
-  const maxChars = Math.floor((videoDurationSec - 0.5) * actualCps);
+  // 🔴 영상 길이 정확하게 맞춤 (TTS rate +15% 감안)
+  const targetChars = Math.floor(videoDurationSec * cps * 1.0);
+  const minChars = Math.floor(videoDurationSec * cps * 0.85);
+  const maxChars = Math.floor(videoDurationSec * cps * 1.15);
 
   let prompt;
 
@@ -1816,20 +1578,17 @@ async function generateReactionScript(originalText, videoDurationSec, visionDesc
 
 **영상 길이:** ${videoDurationSec.toFixed(1)}초
 ${visionDesc ? `\n**영상 화면 설명:**\n${visionDesc}\n` : ''}
-**원본 자막 (참고용 — 길이는 무시):**
+**원본 자막 (참고용):**
 ${originalText}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔴 길이 강제 (가장 중요!)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- 🔴 **영상 길이 ${videoDurationSec.toFixed(1)}초가 절대 기준!** 원본 자막 길이는 신경쓰지 마라.
-- 🔴 원본 자막이 짧아도 ${videoDurationSec.toFixed(1)}초 영상에 맞게 **${minChars}~${targetChars}자로 알차게** 채워라.
-- 🔴 원본이 5자만 나와도 너는 ${minChars}~${targetChars}자로 만들어야 한다.
 - 🔴 **목표 글자수: ${minChars}~${targetChars}자** (정확히 이 범위)
 - 🔴 **최대 ${maxChars}자 절대 초과 금지!** 초과하면 TTS가 영상보다 길어져 끊깁니다.
-- 🔴 짧으면 영상 무음 빈 시간 생김, 길면 잘림 → 둘 다 안 됨
-- 🔴 광고 카피 전문가답게 영상 길이만큼 **공감 + 장점 + CTA로 자연스럽게 채운다**
+- 🔴 영상 ${videoDurationSec.toFixed(1)}초에 정확히 맞는 분량
+- 🔴 짧으면 영상 무음, 길면 잘림 → 둘 다 안 됨
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ❌ 절대 하지 말 것
@@ -2000,606 +1759,327 @@ Exactly ${minChars}-${targetChars} characters total. NEVER exceed ${maxChars}.`;
 }
 
 
-// ============================================================================
-// 🎯 광고 카피 생성 (2026.04 v22 재구현 — 줄수 기반 + TTS 보정 루프)
-// ----------------------------------------------------------------------------
-// 핵심 원칙:
-//  1) LLM은 "문장 생성만". 길이는 코드가 강제.
-//  2) 글자수 명령 대신 "총 N줄, 한 줄 X자" 로 통제.
-//  3) 출력 → 후처리(중복 제거/자르기/패딩) → 그대로 반환.
-//  4) 영상 길이 절대 초과 금지. (호출부의 maxSafeChars 안전망과 이중 방어)
-// ============================================================================
-
-// 🆕 영상 길이 파싱: "29초", "1분 10초", "1:10", "29" 모두 지원 → 초 반환
-function parseVideoDuration(input) {
-  if (input == null) return null;
-  if (typeof input === 'number' && isFinite(input)) return Math.floor(input);
-  const text = String(input).trim();
-  if (!text) return null;
-
-  // 1:10 형식
-  const colon = text.match(/^(\d+):(\d+)$/);
-  if (colon) return parseInt(colon[1], 10) * 60 + parseInt(colon[2], 10);
-
-  // 1분 10초 형식
-  const minSec = text.match(/(\d+)\s*분\s*(\d+)?\s*초?/);
-  if (minSec) {
-    const min = parseInt(minSec[1], 10);
-    const sec = minSec[2] ? parseInt(minSec[2], 10) : 0;
-    return min * 60 + sec;
-  }
-
-  // 29초 형식
-  const secOnly = text.match(/(\d+)\s*초/);
-  if (secOnly) return parseInt(secOnly[1], 10);
-
-  // 숫자만
-  if (/^\d+$/.test(text)) return parseInt(text, 10);
-
-  return null;
-}
-
-// 🆕 영상 길이별 쇼핑쇼츠 제한값 (줄/글자)
-function getShoppingScriptLimits(videoDurationSec, option = 'short') {
-  const sec = Math.max(5, Number(videoDurationSec || 30));
-  let minLines, maxLines, minChars, maxChars;
-
-  if (sec <= 15) {
-    minLines = 3; maxLines = 5; minChars = 70; maxChars = 120;
-  } else if (sec <= 25) {
-    minLines = 5; maxLines = 7; minChars = 120; maxChars = 190;
-  } else if (sec <= 35) {
-    minLines = 7; maxLines = 10; minChars = 190; maxChars = 250;
-  } else if (sec <= 45) {
-    minLines = 9; maxLines = 12; minChars = 240; maxChars = 320;
-  } else if (sec <= 60) {
-    minLines = 12; maxLines = 16; minChars = 310; maxChars = 430;
-  } else {
-    minLines = 16; maxLines = 24; minChars = 420; maxChars = 650;
-  }
-
-  // option=long: 줄바꿈 밀도만 줄임 (말의 양은 유지)
-  if (option === 'long') {
-    maxLines = Math.max(minLines, Math.floor(maxLines * 0.8));
-  }
-
-  return { videoDurationSec: sec, minLines, maxLines, minChars, maxChars };
-}
-
-// 🆕 쇼핑쇼츠 전용 프롬프트 빌더 (생성 + 리라이팅 모드 모두 처리)
-function buildShoppingScriptPrompt({ originalText, productName, videoDurationSec, option = 'short', mode = 'generate' }) {
-  const limits = getShoppingScriptLimits(videoDurationSec, option);
-  const lineStyle = option === 'long'
-    ? '긴 호흡: 한 줄 18~32자, 자연스럽게 덜 끊기'
-    : '짧은 호흡: 한 줄 8~18자, 빠르게 자주 끊기';
-
-  return `너는 쇼핑쇼츠 광고 대본 전문가다.
-
-목표:
-영상 길이에 딱 맞는 짧고 강한 TTS용 대본을 만든다.
-설명하지 말고 대본만 출력한다.
-
-[작업 모드]
-${mode === 'rewrite' ? '기존 대본을 영상 길이에 맞게 더 짧고 강하게 리라이팅한다.' : '제품과 원본 내용을 바탕으로 쇼핑쇼츠 대본을 생성한다.'}
-
-[영상 길이]
-${limits.videoDurationSec}초
-
-[절대 길이 제한]
-- 총 ${limits.minLines}~${limits.maxLines}줄
-- 총 ${limits.minChars}~${limits.maxChars}자 이내
-- 영상 길이보다 길어질 것 같으면 무조건 줄인다
-- 길게 쓰는 것보다 짧게 맞추는 것이 우선이다
-
-[자막 호흡 옵션]
-${lineStyle}
-
-중요:
-짧은/긴은 대본 길이가 아니라 줄바꿈 밀도 차이다.
-전체 말의 양은 영상 길이 기준을 지킨다.
-
-[구조]
-1줄: 강한 훅
-2~3줄: 공감 문제
-중간: 제품 장점 1~2개 + 사용 후 변화
-마지막 1~2줄: 행동 유도
-
-[반복 금지]
-같은 표현을 반복하지 마라.
-같은 의미 문장을 반복하지 마라.
-아래 단어는 가능하면 1번만 사용한다.
-- 좋다
-- 진짜
-- 시원하다
-- 남편
-- 추천
-- 이거
-- 전기세
-- 에어컨
-
-[금지 문장]
-아래처럼 의미 없는 마무리 문장 금지.
-진짜 좋아요
-너무 만족해요
-사용해 보세요
-좋을 거예요
-시원한 바람을 즐기세요
-이 제품은 진짜 좋았어요
-남편도 만족해요
-가격도 괜찮고 좋았어요
-
-[스타일]
-- 말하듯 자연스럽게
-- 짧고 강하게
-- 쇼츠 광고처럼 빠른 템포
-- 약간 과장 가능
-- 광고 티 나는 설명체 금지
-- 반복보다 임팩트 우선
-
-[제품]
-${productName || '제품명 없음'}
-
-[참고 원문 또는 기존 대본]
-${originalText || ''}
-
-[출력 형식]
-- 코드블록 없이
-- 번호 없이
-- 불릿 없이
-- 대본만 출력
-- 줄바꿈 유지`;
-}
-
-// 🆕 후처리: 줄 정리
-function cleanShoppingScript(text) {
-  return String(text || '')
-    .replace(/```[\s\S]*?```/g, m => m.replace(/```/g, '').trim())
-    .replace(/^\s*[-*•]\s*/gm, '')
-    .replace(/^\s*\d+[.)]\s*/gm, '')
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
-// 🆕 후처리: 의미 중복 줄 제거 (강조 부사 무시하고 비교)
-function removeRepeatedShoppingLines(text) {
-  const lines = cleanShoppingScript(text).split('\n');
-  const seen = new Set();
-  const result = [];
-  for (const line of lines) {
-    const key = line
-      .replace(/\s/g, '')
-      .replace(/[!?.,~…]/g, '')
-      .replace(/진짜|너무|완전|정말/g, '');
-    if (!key) continue;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(line);
-  }
-  return result.join('\n');
-}
-
-// 🆕 후처리: 줄/글자 수 제한 (첫 줄 훅 + 마지막 CTA 보호)
-function fitShoppingScriptToLimits(text, limits) {
-  let lines = removeRepeatedShoppingLines(text).split('\n').filter(Boolean);
-  if (lines.length <= 2) return lines.join('\n');
-
-  const first = lines[0];
-  const last = lines[lines.length - 1];
-  let middle = lines.slice(1, -1);
-
-  // 줄 수 제한 (중간만 제거)
-  while ([first, ...middle, last].length > limits.maxLines && middle.length > 0) {
-    middle.pop();
-  }
-  // 글자 수 제한 (중간만 제거)
-  while ([first, ...middle, last].join('').length > limits.maxChars && middle.length > 0) {
-    middle.pop();
-  }
-
-  return [first, ...middle, last].join('\n');
-}
-
-// 🆕 최종 강제 제한 (TTS 진입 직전 마지막 안전망)
-// LLM 결과가 무엇이든, 영상 길이에 맞게 강제로 자른다.
-// 첫 줄(훅) + 마지막 줄(CTA) 보호. 중간만 제거.
-function hardLimitShoppingScript(text, videoDurationSec, option = 'short') {
-  const sec = Number(videoDurationSec || 30);
-  let maxLines, maxChars;
-  // 🆕 한도 완화: 영상 길이를 더 알차게 채우기 위해 글자/줄 수 늘림
-  // 한국어 TTS 약 7~8자/초 → 영상 길이 × 7자 정도가 적정
-  if (sec <= 15) {
-    maxLines = option === 'long' ? 6 : 8; maxChars = 180;  // 14초 영상: 7~8줄, 180자
-  } else if (sec <= 25) {
-    maxLines = option === 'long' ? 8 : 10; maxChars = 270;  // 25초: 약 240~270자
-  } else if (sec <= 35) {
-    maxLines = option === 'long' ? 10 : 12; maxChars = 350;  // 33초: 약 280~350자
-  } else if (sec <= 45) {
-    maxLines = option === 'long' ? 12 : 14; maxChars = 430;
-  } else if (sec <= 60) {
-    maxLines = option === 'long' ? 14 : 18; maxChars = 560;
-  } else {
-    maxLines = option === 'long' ? 20 : 26; maxChars = 720;
-  }
-
-  // 1. 줄 정리
-  let lines = String(text || '')
-    .replace(/```/g, '')
-    .split('\n')
-    .map(x => x.trim())
-    .filter(Boolean)
-    .map(line => line.replace(/^\s*[-*•]\s*/, '').replace(/^\s*\d+[.)]\s*/, '').trim())
-    .filter(Boolean);
-
-  // 2. 반복 문장 제거 (강조 부사, 흔한 광고 어구 무시하고 비교)
-  const seen = new Set();
-  const filtered = [];
-  for (const line of lines) {
-    const key = line
-      .replace(/\s/g, '')
-      .replace(/[!?.,~…]/g, '')
-      .replace(/진짜|정말|너무|완전|좋다|좋아요|하더라고|하더라|라니까/g, '');
-    if (!key) continue;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    filtered.push(line);
-  }
-  lines = filtered;
-
-  if (lines.length === 0) return '';
-
-  // 3. 첫 줄(훅) / 마지막 줄(CTA) 분리. CTA가 약하면 강제 교체
-  const first = lines[0];
-  let last = lines[lines.length - 1];
-  const ctaPatterns = /(봐|확인|챙겨|추천|써봐|구매|놓치|가기|가봐|클릭|찜|득템)/;
-  if (!ctaPatterns.test(last)) {
-    last = '지금 한번 확인해봐';
-  }
-  let middle = lines.length >= 2 ? lines.slice(1, -1) : [];
-
-  // 4. 줄 수 제한 (중간만 제거)
-  while ([first, ...middle, last].length > maxLines && middle.length > 0) {
-    middle.pop();
-  }
-  let resultLines = [first, ...middle, last];
-
-  // 5. 글자 수 제한 (중간만 제거)
-  while (resultLines.join('').length > maxChars && middle.length > 0) {
-    middle.pop();
-    resultLines = [first, ...middle, last];
-  }
-
-  // 6. 그래도 길면 마지막 줄 직전 줄들 제거
-  while (resultLines.join('').length > maxChars && resultLines.length > 2) {
-    resultLines.splice(resultLines.length - 2, 1);
-  }
-
-  return resultLines.join('\n');
-}
-
-// 🆕 [최종 안정화] 대본/TTS/자막 단일 기준 데이터 생성
-// hardLimitShoppingScript를 한 번 거쳐 글자/줄 한도 적용 + 결과를 finalScript 객체로 반환
-// TTS와 자막은 모두 finalScript.lines 하나만 보고 만들어야 함
-function finalizeShoppingScript(text, videoDurationSec, option = 'short') {
-  const sec = Number(videoDurationSec || 30);
-  // 한도 적용 (기존 hardLimit 재사용 — 검증된 로직)
-  const limited = hardLimitShoppingScript(text, sec, option);
-  const lines = limited.split('\n').map(l => l.trim()).filter(Boolean);
-  const resultText = lines.join('\n');
-  return {
-    text: resultText,
-    lines,
-    chars: resultText.replace(/\n/g, '').length,
-    videoDurationSec: sec,
-    option,
-  };
-}
-
-// 영상 길이 → 총 글자수, 줄 수, 줄당 글자수
-function calculateScriptParams(videoDurationSec, lang = 'ko') {
-  const baseCps = getCharsPerSecond(lang); // ko=7
-  const actualCps = baseCps * 1.15;        // TTS +15% 보정
-  let totalChars = Math.max(40, Math.floor((videoDurationSec - 0.5) * actualCps));
-  const lineCount = Math.max(4, Math.round(videoDurationSec / 3.5));
-
-  // 🆕 product 모드 GAP 단축(0.15→0.07)으로 절약된 시간만큼 추가 글자 허용
-  // (단, 최대 5%까지만 — 영상 길이 초과 방지)
-  const OLD_PRODUCT_TTS_GAP_SEC = 0.15;
-  const PRODUCT_TTS_GAP_SEC = 0.05;
-  const gapCount = Math.max(0, lineCount - 1);
-  const savedGapSec = Math.max(0, (OLD_PRODUCT_TTS_GAP_SEC - PRODUCT_TTS_GAP_SEC) * gapCount);
-  const extraCharsFromGap = Math.floor(savedGapSec * actualCps);
-  const maxExtraChars = Math.floor(totalChars * 0.05);
-  const safeExtraChars = Math.min(extraCharsFromGap, maxExtraChars);
-  totalChars += safeExtraChars;
-
-  const charsPerLine = Math.max(12, Math.floor(totalChars / lineCount));
-
-  console.log('[product] TTS GAP 조정', {
-    oldGap: OLD_PRODUCT_TTS_GAP_SEC,
-    newGap: PRODUCT_TTS_GAP_SEC,
-    estimatedLineCount: lineCount,
-    savedGapSec: Number(savedGapSec.toFixed(3)),
-    extraCharsFromGap,
-    maxExtraChars,
-    safeExtraChars,
-    totalChars,
-  });
-
-  return { totalChars, lineCount, charsPerLine };
-}
-
-// 원본 스크립트에서 "통증 유형" 감지
-function detectPainType(text) {
-  const t = (text || '').toLowerCase();
-  if (/비싸|전기세|돈|낭비|가성비/.test(t)) return 'cost';
-  if (/시간|오래|걸리|빨리/.test(t)) return 'time';
-  if (/안되|효과없|실패/.test(t)) return 'fail';
-  if (/귀찮|불편|짜증/.test(t)) return 'pain';
-  if (/차이|전후|달라|비교/.test(t)) return 'compare';
-  if (/바로|즉각|즉시/.test(t)) return 'instant';
-  return 'general';
-}
-
-// 통증별 카피 전략
-function getPainStrategy() {
-  return {
-    cost:    { hook: ['이거 모르고 쓰면 돈 낭비입니다'],     angle: '비용 절약' },
-    time:    { hook: ['이거 없이 하면 시간 낭비입니다'],     angle: '시간 절약' },
-    fail:    { hook: ['이거 전에는 효과 없었습니다'],         angle: '실패에서 해결' },
-    pain:    { hook: ['이거 없으면 계속 불편합니다'],         angle: '불편 해결' },
-    compare: { hook: ['이거 쓰기 전이랑 완전히 다릅니다'],   angle: '전후 비교' },
-    instant: { hook: ['이거 쓰면 바로 달라집니다'],           angle: '즉각 변화' },
-    general: { hook: ['요즘 이거 안 쓰면 손해입니다'],       angle: '생활 개선' },
-  };
-}
-
-// 프롬프트: 글자수 강제 X, 줄 수 강제 O
-function buildAdCopyPrompt(originalText, params, strategy, hookOverride) {
-  const hookLine = hookOverride
-    ? `- "${hookOverride}" 처럼 강하게 시작 (이 문구를 그대로 쓰지 말고 톤만 참고)`
-    : `- ${strategy.hook.join('\n- ')}`;
-  return `쇼츠 광고 대본 생성
-
-[조건]
-- 총 ${params.lineCount}줄
-- 각 줄 ${params.charsPerLine - 3}~${params.charsPerLine + 3}자
-
-[구조]
-1줄: 강한 후킹
-2~3줄: 문제 공감
-중간: ${strategy.angle}
-마지막: 행동 유도
-
-[후킹 스타일]
-${hookLine}
-
-[규칙]
-- 반복 금지
-- 같은 의미 문장 금지
-- 설명형 금지
-- 짧고 강하게
-- 자연스럽게
-- 마침표(.) 금지, 이모지 금지
-- 한국어로만 출력
-
-[출력]
-줄바꿈만. 라벨/번호/마크다운 금지.
-
-[참고]
-${originalText}
-`;
-}
-
-// 줄 정리
-function _normalizeLines(text) {
-  return (text || '')
-    .split('\n')
-    .map(l => l.trim())
-    .map(l => l.replace(/^[-•*\d\.]+\s*/, ''))                     // 불릿 제거
-    .map(l => l.replace(/^\**(훅|문제|해결|결과|CTA|어필)\**:?\s*/i, '')) // 라벨 제거
-    .filter(l => l && !l.startsWith('**') && !l.startsWith('##') && !l.startsWith('━'))
-    .join('\n');
-}
-
-// 의미 중복 제거 (정확히 같은 줄 + 70% 이상 유사한 줄)
-function _removeDuplicateLines(text) {
-  const lines = text.split('\n');
-  const out = [];
-  const seen = [];
-  for (const line of lines) {
-    const key = line.replace(/\s/g, '');
-    if (!key) continue;
-    // 완전 중복
-    if (seen.some(s => s === key)) continue;
-    // 부분 중복 (앞 70% 일치)
-    const head = key.slice(0, Math.max(6, Math.floor(key.length * 0.7)));
-    if (head.length >= 6 && seen.some(s => s.startsWith(head))) continue;
-    seen.push(key);
-    out.push(line);
-  }
-  return out.join('\n');
-}
-
-// 줄 수 제한
-// 줄 수 제한 (🆕 첫 줄=후킹, 마지막 줄=CTA 보호. 중간 줄만 제거)
-function _limitLines(text, maxLines) {
-  const lines = text.split('\n').filter(l => l.trim());
-  if (lines.length <= maxLines) return lines.join('\n');
-  if (maxLines <= 2) return lines.slice(0, maxLines).join('\n');
-  const first = lines[0];
-  const last = lines[lines.length - 1];
-  const middleKeep = maxLines - 2;
-  const middle = lines.slice(1, -1).slice(0, middleKeep);
-  return [first, ...middle, last].join('\n');
-}
-
-// 안전한 자르기 (마지막 완전한 줄 기준)
-function _smartTrim(text, maxChars) {
-  if (text.length <= maxChars) return text;
-  let t = text.slice(0, maxChars);
-  const idx = t.lastIndexOf('\n');
-  if (idx > maxChars * 0.6) t = t.slice(0, idx);
-  return t.trim();
-}
-
-// 🆕 구조 유지 자르기: 첫 줄(후킹)과 마지막 줄(CTA)은 절대 삭제 금지
-// 길이 초과 시 중간 줄을 뒤에서부터 제거
-function _smartTrimKeepStructure(text, maxChars) {
-  const lines = text.split('\n').filter(l => l.trim());
-  if (lines.length <= 2) {
-    // 줄이 0~2개면 글자 단위 자르기로만 처리
-    return _smartTrim(lines.join('\n'), maxChars);
-  }
-  const first = lines[0];
-  const last = lines[lines.length - 1];
-  let middle = lines.slice(1, -1);
-
-  // 첫줄 + 마지막줄만으로도 maxChars 초과면 → 중간 자르기보다 글자단위 trim
-  const minLen = first.length + last.length + 2; // 줄바꿈 2개
-  if (minLen > maxChars) {
-    return _smartTrim([first, last].join('\n'), maxChars);
-  }
-
-  let result = [first, ...middle, last];
-  // 중간만 뒤에서 제거 (첫/마지막 보호)
-  while (result.join('\n').length > maxChars && middle.length > 0) {
-    middle.pop();
-    result = [first, ...middle, last];
-  }
-  return result.join('\n');
-}
-
-// 길이 맞추기 (긴 건 구조 유지하며 자르고, 짧으면 그대로)
-function _fitToTargetLength(text, totalChars) {
-  if (text.length > totalChars) return _smartTrimKeepStructure(text, totalChars);
-  return text;
-}
-
-// 후처리 파이프라인
-function _postProcessAdCopy(text, params) {
-  let r = _normalizeLines(text);
-  r = _removeDuplicateLines(r);
-  r = _limitLines(r, params.lineCount);
-  r = _fitToTargetLength(r, params.totalChars);
-  return r;
-}
-
-// 금지어 필터
-function _filterBannedWords(text, bannedWords) {
-  if (!bannedWords || bannedWords.length === 0) return text;
-  const lower = bannedWords.map(w => w.toLowerCase());
-  const lines = text.split('\n').filter(line => {
-    const l = line.toLowerCase();
-    return !lower.some(b => l.includes(b));
-  });
-  return lines.join('\n');
-}
-
-// ============================================================================
-// 메인: 광고 카피 생성
-// ============================================================================
 async function generateAdCopy(originalText, videoDurationSec, targetLang, config, onProgress) {
   onProgress('translate', 50, '광고 카피 재작성 중...');
 
-  // 한국어가 아니면 기존 방식과 호환되게 단순 프롬프트 (영어/기타)
-  if (targetLang !== 'ko') {
-    return await _generateAdCopyForeign(originalText, videoDurationSec, targetLang, config);
-  }
-
-  // 🆕 후킹/마무리 멘트 시간 미리 계산 (본문에서 그만큼 빼야 영상 길이 안 넘음)
-  const userHook = (config.hookText || config.productHookText || '').trim();
+  const targetLangName = LANGUAGES[targetLang]?.name || '한국어';
+  const cps = getCharsPerSecond(targetLang);
+  // 🔴 TTS rate +15% 감안해서 실제 읽기 속도 계산
+  // 기본 cps=7인데 +15% 빠르게 읽으면 → 실제 초당 8글자 읽음
+  const actualCps = cps * 1.15;
+  
+  // 🔴 마지막 멘트 길이 미리 계산 (있으면)
   const outroText = (config.outroText || '').trim();
-  const cps = getCharsPerSecond(targetLang) * 1.15; // TTS +15% 보정
-  const hookSeconds = userHook ? (userHook.length / cps) : 0;
-  const outroSeconds = outroText ? (outroText.length / cps) : 0;
-  const reservedSeconds = hookSeconds + outroSeconds;
-  // 본문이 사용할 수 있는 시간 = 영상 길이 - 후킹 - 마무리
-  const bodyDuration = Math.max(3, videoDurationSec - reservedSeconds);
+  const outroChars = outroText.length;
+  
+  // 영상 길이에서 마지막 멘트 읽는 시간 빼고 계산
+  const outroSeconds = outroChars > 0 ? outroChars / actualCps : 0;
+  const availableSeconds = videoDurationSec - outroSeconds - 0.5; // 0.5초 여유
+  
+  // 카피 길이 계산 (마지막 멘트 제외한 부분)
+  const targetChars = Math.floor(availableSeconds * actualCps * 0.95);
+  const minChars = Math.floor(availableSeconds * actualCps * 0.85);
+  const maxChars = Math.floor(availableSeconds * actualCps * 1.0); // 딱 맞게
+  
+  console.log(`[adCopy] 영상 ${videoDurationSec}초, 마지막멘트 ${outroChars}자(${outroSeconds.toFixed(1)}초), 카피 목표 ${targetChars}자 (${minChars}~${maxChars})`);
 
-  // 1. 길이 파라미터 계산 (본문 시간 기준)
-  const params = calculateScriptParams(bodyDuration, targetLang);
-  console.log(`[adCopy] 영상 ${videoDurationSec.toFixed(1)}초 (후킹 ${hookSeconds.toFixed(1)}s + 마무리 ${outroSeconds.toFixed(1)}s 예약) → 본문 ${bodyDuration.toFixed(1)}s, ${params.totalChars}자, ${params.lineCount}줄`);
+  // 말투 설정 (반말/존댓말)
+  const speechStyle = config.speechStyle || 'casual';
+  const speechStyleInstruction = speechStyle === 'formal'
+    ? '✅ **존댓말 사용**: "~입니다", "~해요", "~드려요" 등 공손한 어투로 작성'
+    : '✅ **반말 사용**: 친구한테 추천하는 듯한 편한 말투로 작성';
 
-  // 2. 통증 유형 감지 + 전략
-  const painType = detectPainType(originalText);
-  const strategy = getPainStrategy()[painType];
-  console.log(`[adCopy] 감지된 통증 유형: ${painType} (${strategy.angle})`);
+  // 사용자 지정 후킹 멘트 (hookText 또는 productHookText)
+  const userHook = (config.hookText || config.productHookText || '').trim();
+  const hookInstruction = userHook 
+    ? `🔴 **첫 문장은 반드시 다음 후킹 멘트로 시작**: "${userHook}"\n   (이 멘트를 그대로 사용하고, 이어서 카피 작성)`
+    : `🔴 **첫 문장 후킹은 매번 새롭고 다양하게!** 아래 예시 중 하나를 참고하되, 비슷하게만 쓰지 말고 창의적으로:
+   - "이거 본 순간 손가락이 멈췄음"
+   - "주방용품 쇼핑 끝낸 사람만 봐"
+   - "남편이 이거 보고 결제 누름"
+   - "여름 다가오는데 ㅇㅇ 못 한 사람 손!"
+   - "진짜 이런 거 있는 줄 몰랐음"
+   - "와 이건 진짜 미친 가성비"
+   - "혼자 알기 아까워서 공유함"
+   - "장바구니 1년 묵혀두다 드디어 샀는데"
+   🔴 예시와 똑같이 쓰면 안 됨! 매번 새로운 표현으로!`;
 
-  // 3. 사용자 후킹 우선 적용
-  const hookOverride = userHook || null;
+  // 한국어일 때와 그 외 언어일 때 프롬프트 분기
+  let prompt;
 
-  // 4. LLM 호출 (1회만) - 본문만 만듦 (후킹/마무리는 코드가 붙임)
-  const prompt = buildAdCopyPrompt(originalText, params, strategy, hookOverride);
-  let adCopy = await callLLM([{ role: 'user', content: prompt }], config);
+  if (targetLang === 'ko') {
+    // === 한국어 광고 카피 (자막형) ===
+    prompt = `당신은 한국 쇼츠 광고 카피라이팅 최고 전문가입니다.
+틱톡 / 인스타 / 유튜브 쇼츠에서
+폭발적으로 반응 나오는 광고 대본을 작성하세요.
 
-  // 5. 후처리 (본문 길이만큼만)
-  adCopy = _postProcessAdCopy(adCopy, params);
+**영상 정보:**
+- 영상 길이: ${videoDurationSec.toFixed(1)}초
+- 🔴 **목표 카피 길이: ${minChars}~${targetChars}자**
+- 🔴 **최대 ${maxChars}자 절대 초과 금지!**
 
-  // 6. 사용자 후킹이 있으면 첫 줄 강제 (LLM이 제대로 안 넣었을 때만)
-  if (userHook && !adCopy.split('\n')[0]?.includes(userHook.slice(0, 8))) {
-    adCopy = userHook + '\n' + adCopy;
-    adCopy = _fitToTargetLength(adCopy, params.totalChars);
-  }
-
-  // 7. 금지어 필터
-  adCopy = _filterBannedWords(adCopy, config.bannedWords);
-
-  // 8. 외국어 제거
-  adCopy = adCopy
-    .replace(/[\u0600-\u06FF]/g, '')   // 아랍어
-    .replace(/[\u4E00-\u9FFF]/g, '')   // 한자
-    .replace(/[\u3040-\u30FF]/g, '')   // 일본어
-    .replace(/[a-zA-Z]+/g, '')         // 영어
-    .replace(/。/g, '!')
-    .replace(/\.(?!\d)/g, '!')
-    .replace(/!+/g, '!');
-
-  // 9. 빈 줄 정리
-  adCopy = adCopy.split('\n').map(l => l.trim()).filter(Boolean).join('\n');
-
-  console.log(`[adCopy] ✅ 최종 카피: ${adCopy.length}자, ${adCopy.split('\n').length}줄`);
-  return adCopy;
-}
-
-// ============================================================================
-// 외국어용 (단순 버전 — 기존 호환)
-// ============================================================================
-async function _generateAdCopyForeign(originalText, videoDurationSec, targetLang, config) {
-  const targetLangName = LANGUAGES[targetLang]?.name || targetLang;
-  const cps = getCharsPerSecond(targetLang) * 1.15;
-  const totalChars = Math.max(40, Math.floor((videoDurationSec - 0.5) * cps));
-  const lineCount = Math.max(4, Math.round(videoDurationSec / 3.5));
-
-  const prompt = `Create a viral ${targetLangName} Shorts ad copy.
-
-**Video length:** ${videoDurationSec.toFixed(1)}s
-**Total lines:** ${lineCount}
-**Per line:** ~${Math.floor(totalChars / lineCount)} chars
-**Output language:** ${targetLangName} ONLY
-
-**Original (reference only, not literal translation):**
+**원본 스크립트 (참고만):**
 ${originalText}
 
-[Rules]
-- One sentence per line, line breaks only
-- No labels, no markdown, no emoji
-- No repetition, no filler
-- Hook → problem → solution → CTA
-- DO NOT translate literally. Recreate as native ${targetLangName} shorts copy.
+────────────────────
+[출력 방식 - 핵심 변경]
+────────────────────
+- 문장이 아니라 "자막 + 더빙용 대본"으로 작성
+- 한 줄씩 끊어서 출력
+- 각 줄 = 음성 한 번에 읽는 단위
+👉 페이지 / 문단 / 설명 금지
+👉 줄바꿈만 사용
 
-Write the copy now:`;
+────────────────────
+[자막 / 더빙 규칙 - 핵심]
+────────────────────
+- 한 줄은 짧고 빠르게 읽히게 작성
+- 한 줄 = 1~2초 분량
+👉 읽고 멈출 수 있어야 함
 
-  let adCopy = await callLLM([{ role: 'user', content: prompt }], config);
-  adCopy = _normalizeLines(adCopy);
-  adCopy = _removeDuplicateLines(adCopy);
-  adCopy = _limitLines(adCopy, lineCount);
-  if (adCopy.length > totalChars) adCopy = _smartTrim(adCopy, totalChars);
-  adCopy = _filterBannedWords(adCopy, config.bannedWords);
-  return adCopy;
+────────────────────
+[문법 규칙]
+────────────────────
+- 자연스럽게 말이 되게 작성
+- 주어 + 동사 분리 금지
+- 🔴 한 줄은 반드시 완전한 문장으로! 단어나 짧은 구절 금지!
+
+────────────────────
+[길이 제한]
+────────────────────
+- 🔴 한 줄 최소 20자 ~ 최대 40자
+- 너무 짧으면 TTS가 뚝뚝 끊김! 완전한 문장으로!
+- 적당히 끊되, 문장이 완결되게
+
+────────────────────
+[분할 예시]
+────────────────────
+❌ 너무 짧음 (단어 수준)
+이거
+써봤는데
+진짜
+편함
+
+❌ 이것도 너무 짧음
+이거 써봤는데
+진짜 편하고
+깔끔함
+
+⭕ 적당함 (완전한 문장)
+이거 써봤는데 진짜 편하고 깔끔해!
+디자인도 예쁘고 가성비 미쳤음~
+
+────────────────────
+📐 5단계 구조 (흐름 유지하되 자막형으로 분할)
+────────────────────
+1. 후킹 (초반 2~3줄 강하게)
+   ${hookInstruction}
+
+2. 공감 문제
+
+3. 해결 + 디테일
+
+4. 추가 어필
+
+5. CTA
+👉 구조는 유지하되 "줄 단위"로 풀 것
+
+────────────────────
+🎭 톤
+────────────────────
+${speechStyleInstruction}
+- 위트 + 약간 과장
+- 마침표 금지
+- 느낌표 / 물음표 사용 가능
+
+────────────────────
+🔢 숫자 규칙
+────────────────────
+- 2.4m → 이점사 미터
+- 24kg → 이십사 킬로
+
+────────────────────
+🚫 금지
+────────────────────
+- 설명형 문장
+- 긴 문장
+- 한 줄에 정보 2개 이상
+- 광고 티 나는 문장
+- 마침표(.)
+- 이모지
+
+────────────────────
+[출력 형식]
+────────────────────
+- 코드블록 없이
+- 줄바꿈만 있는 대본 출력
+- 추가 설명 금지
+- 최소 ${minChars}자 이상 필수!`;
+
+  } else if (targetLang === 'en') {
+    // === 영어 광고 카피 ===
+    prompt = `You are a top TikTok/Instagram/YouTube Shorts ad copywriter.
+Create a viral English short-form ad copy that sounds like it was written by a native English speaker from scratch.
+DO NOT translate literally - completely recreate the message in natural English Shorts style.
+
+**Video Info:**
+- Video length: ${videoDurationSec.toFixed(1)} seconds
+- 🔴 **Target length: ${minChars}~${targetChars} characters** (must be within this range)
+- 🔴 NEVER write less than ${minChars} chars. The video must not have silence.
+
+**Original Script (reference only, NO literal translation):**
+${originalText}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📐 5-Part Structure (MUST follow)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**1. Hook (3 sec)** - First 1-2 sentences must grab attention
+   ✅ Good:
+   - "Wait until you see this"
+   - "POV: you just found the best kitchen hack"
+   - "I'm literally obsessed with this"
+   - "Nobody's talking about this but..."
+   - "This changed my morning routine forever"
+   ❌ Bad: "Let me introduce...", "Today I'll show you..."
+
+**2. Relatable Problem (5 sec)** - Real pain point people face
+   ✅ Specific situations:
+   - "You know that moment when..."
+   - "I used to waste hours trying to..."
+   - "Every single time I..."
+
+**3. Solution + Details (15 sec)** - How the product solves it + specs
+   ✅:
+   - "But then I found this..."
+   - "You literally just..."
+   - "And the best part?"
+
+**4. Extra Appeal (5 sec)** - A twist or punch line
+   ✅:
+   - "It's basically a game changer"
+   - "I can't believe it's only..."
+   - "Honestly worth every penny"
+
+**5. CTA (2-3 sec)** - Natural call to action
+   ✅:
+   - "Link in bio for details"
+   - "Check my profile for the link"
+   - "All info in my bio"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎭 Tone & Style
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Casual, friend-recommending tone
+✅ Witty + slightly exaggerated
+✅ Natural interjections: "honestly", "literally", "no joke", "trust me"
+✅ Short, punchy sentences
+✅ NOT salesy - sound like an authentic recommendation
+
+❌ Stiff formal language / Corporate speak / Fake hype / Emojis
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔢 Numbers/Units (for TTS to read correctly)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- ❌ "2.4m x 1.5m" → ✅ "two point four meters by one point five meters"
+- ❌ "24kg" → ✅ "twenty four kilograms"
+- ❌ "100%" → ✅ "one hundred percent"
+- Write out numbers and units as words
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 Output Format
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Output the copy only. Separate each sentence with a newline.
+NO labels, NO numbering, NO markdown, NO explanations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Good Example (25 sec, ~200 chars)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Original: "This 2.4m x 1.5m foldable pool is much better than plastic alternatives."
+
+Output:
+POV: summer's coming and you don't want to spend hundreds on a pool
+I literally found the solution
+This foldable pool is two point four meters by one point five meters
+You know how you buy those cheap plastic pools and they break after one use?
+Yeah, this one literally just folds up and fits in a box
+End of summer, just pack it away until next year
+I'm telling you, this is a game changer
+Link in bio for details
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Now write the copy following all the rules above.
+**Minimum ${minChars} characters**, 5-part structure, casual witty tone:`;
+
+  } else {
+    // === 기타 언어 (일본어/중국어/스페인어 등) ===
+    prompt = `You are a top short-form video ad copywriter for ${targetLangName}.
+Create a viral ${targetLangName} Shorts ad copy that sounds native and natural.
+DO NOT translate literally - completely recreate the message in the target language's natural Shorts style.
+
+**CRITICAL: Your output MUST be in ${targetLangName}. Do NOT use any other language.**
+
+**Video Info:**
+- Video length: ${videoDurationSec.toFixed(1)} seconds
+- Target output length: ${minChars}~${targetChars} characters
+
+**Original Script (reference only, NO literal translation):**
+${originalText}
+
+**5-Part Structure:**
+1. Hook (3s): Attention-grabbing first sentence
+2. Relatable Problem (5s): Pain point people face
+3. Solution + Details (15s): How the product solves it with specifics
+4. Extra Appeal (5s): Wit or punch line
+5. CTA (2-3s): Natural call to action ("profile link", "bio", etc.)
+
+**Tone:**
+- Casual, friend-recommending style (native to ${targetLangName})
+- Witty, natural interjections
+- NOT salesy
+
+**Numbers/Units:** Write out as words (not digits) so TTS reads correctly.
+
+**Output Format:**
+- Output in ${targetLangName} ONLY
+- One sentence per line
+- No labels, no markdown, no explanations
+
+Write the ${targetLangName} ad copy now (minimum ${minChars} characters):`;
+  }
+
+  const content = await callLLM(
+    [{ role: 'user', content: prompt }],
+    config
+  );
+
+  // 응답 정리: 빈 줄 제거, 라벨 제거
+  let lines = content
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l)
+    .map(l => l.replace(/^[-•*\d\.]+\s*/, '')) // 불릿/번호 제거
+    .map(l => l.replace(/^\**(훅|문제|해결|결과|Hook|Problem|Solution|Result|CTA|Appeal)\**:?\s*/i, '')) // 라벨 제거 (한/영)
+    .filter(l => l && !l.startsWith('**') && !l.startsWith('##'));
+
+  // 🔴 금지어 필터링 (config.bannedWords에 있는 문구가 포함된 줄 제거)
+  if (config.bannedWords && config.bannedWords.length > 0) {
+    const bannedWords = config.bannedWords.map(w => w.toLowerCase());
+    const beforeCount = lines.length;
+    lines = lines.filter(line => {
+      const lower = line.toLowerCase();
+      return !bannedWords.some(banned => lower.includes(banned));
+    });
+    const removed = beforeCount - lines.length;
+    if (removed > 0) {
+      console.log(`[adCopy] 금지어로 ${removed}줄 제거됨`);
+    }
+  }
+
+  return lines.join('\n');
 }
-
 
 // ===== 제품 모드: 자막용 키워드 추출 =====
 // 광고 카피에서 "화면에 크게 띄울 임팩트 키워드"만 추출
@@ -3320,6 +2800,85 @@ async function generateElevenLabsTTS(text, voiceId, outputPath, apiKey, onProgre
   }
 }
 
+// ===== 🆕 타입캐스트 TTS =====
+async function generateTypecastTTS(text, voiceId, outputPath, apiKey, onProgress) {
+  onProgress('tts', 65, `타입캐스트 음성 생성 중...`);
+  
+  try {
+    console.log(`[Typecast] API 호출: voice_id=${voiceId}, text="${text.substring(0, 30)}..."`);
+    
+    const response = await axios.post(
+      'https://api.typecast.ai/v1/text-to-speech',
+      {
+        text: text,
+        model: 'ssfm-v30',
+        voice_id: voiceId,
+        prompt: {
+          emotion_type: 'smart',
+        },
+        output: {
+          audio_format: 'mp3',
+          volume: 100,
+        },
+      },
+      {
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+        responseType: 'arraybuffer',
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      }
+    );
+    
+    // 🔧 응답 검증 - 진짜 mp3인지 확인
+    const buffer = Buffer.from(response.data);
+    const fileSize = buffer.length;
+    
+    // 응답 헤더 확인
+    const contentType = response.headers['content-type'] || '';
+    console.log(`[Typecast] 응답 status=${response.status}, content-type=${contentType}, size=${fileSize} bytes`);
+    
+    // mp3 파일 시그니처 체크 (ID3 또는 0xFF로 시작)
+    const isMp3 = (
+      (buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) ||  // ID3
+      (buffer[0] === 0xFF && (buffer[1] === 0xFB || buffer[1] === 0xF3 || buffer[1] === 0xF2))  // MPEG sync
+    );
+    
+    // JSON 응답이면 (에러)
+    if (contentType.includes('json') || (buffer[0] === 0x7B && buffer[1] === 0x22)) {  // {"
+      const jsonText = buffer.toString('utf8');
+      console.error('[Typecast] ❌ JSON 응답 받음 (mp3 아님):', jsonText);
+      throw new Error('타입캐스트가 mp3 대신 JSON 응답: ' + jsonText.substring(0, 200));
+    }
+    
+    if (!isMp3) {
+      console.error('[Typecast] ⚠️ mp3 파일이 아닐 수 있음! 첫 4바이트:', buffer.slice(0, 4).toString('hex'));
+      console.error('[Typecast] 첫 200자:', buffer.toString('utf8', 0, Math.min(200, fileSize)));
+    } else {
+      console.log('[Typecast] ✅ 정상 mp3 응답');
+    }
+    
+    fs.writeFileSync(outputPath, buffer);
+    console.log(`[Typecast] TTS 생성 완료: ${outputPath} (${fileSize} bytes)`);
+    return outputPath;
+  } catch (error) {
+    const errMsg = error.response?.data 
+      ? (Buffer.isBuffer(error.response.data) ? error.response.data.toString() : JSON.stringify(error.response.data))
+      : error.message;
+    console.error('[Typecast] TTS 오류 - status:', error.response?.status, 'msg:', errMsg);
+    
+    let userMsg = '타입캐스트 TTS 실패: ';
+    if (error.response?.status === 401) userMsg += 'API 토큰 오류 (설정에서 확인)';
+    else if (error.response?.status === 403) userMsg += '사용량 초과 또는 권한 없음';
+    else if (error.response?.status === 404) userMsg += 'Voice ID 오류 (' + voiceId + ')';
+    else userMsg += errMsg;
+    
+    throw new Error(userMsg);
+  }
+}
+
 // ===== BGM 믹싱 =====
 async function mixBGM(videoPath, bgmPath, bgmVolume, outputPath, onProgress) {
   onProgress('mix', 90, `BGM 믹싱 중 (${bgmVolume}%)...`);
@@ -3517,24 +3076,13 @@ async function generateTTSPerSegment(segments, voice, outputPath, jobDir, onProg
   };
 }
 
-// 🆕 duration 캐시 (mtime 기준 - 파일이 바뀌면 자동 무효화)
-const __durationCache = new Map();
 async function getMediaDuration(mediaPath) {
-  // mtime을 키에 포함시켜 파일이 수정되면 자동 갱신
-  let mtime = 0;
-  try { mtime = fs.statSync(mediaPath).mtimeMs; } catch (e) {}
-  const cacheKey = `${mediaPath}::${mtime}`;
-  if (__durationCache.has(cacheKey)) {
-    return __durationCache.get(cacheKey);
-  }
   const ffprobe = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
   const { stdout } = await runCommand(ffprobe, [
     '-v', 'error', '-show_entries', 'format=duration',
     '-of', 'default=noprint_wrappers=1:nokey=1', mediaPath,
   ]);
-  const dur = parseFloat(stdout.trim());
-  __durationCache.set(cacheKey, dur);
-  return dur;
+  return parseFloat(stdout.trim());
 }
 
 // ===== drawtext 이스케이프 =====
@@ -4777,10 +4325,7 @@ async function composeFinalVideo({
 
     // 위치 계산
     let wmX, wmY;
-    // 🆕 마진 30 → 80 (자막과 안 겹치게 + 가장자리 띄움)
-    const margin = 80;
-    // 🆕 하단은 자막 영역 피해 더 위로 (자막은 보통 화면 아래쪽)
-    const bottomMargin = 200; // 하단에서 200px 위
+    const margin = 30;
     switch (wmPosition) {
       case 'top-left':
         wmX = `${margin}`;
@@ -4792,21 +4337,17 @@ async function composeFinalVideo({
         break;
       case 'bottom-left':
         wmX = `${margin}`;
-        wmY = `h-text_h-${bottomMargin}`;
+        wmY = `h-text_h-${margin}`;
         break;
       case 'bottom-right':
         wmX = `w-text_w-${margin}`;
-        wmY = `h-text_h-${bottomMargin}`;
+        wmY = `h-text_h-${margin}`;
         break;
       case 'animated':
       default:
-        // 🆕 전체 화면 부드럽게 떠다니기 (위/아래/좌/우 다)
-        // sin/cos로 원 운동 + 약간의 변주로 자연스럽게
-        // X: 화면 가운데 ± 30% (좌우 자유롭게 움직임)
-        // Y: 화면 가운데 ± 30% (위아래 자유롭게 움직임)
-        // t * 0.3, 0.2로 천천히 (각각 다른 주기로 패턴 안 반복)
-        wmX = `(w-text_w)/2 + sin(t*0.3)*(w*0.30)`;
-        wmY = `(h-text_h)/2 + cos(t*0.2)*(h*0.30)`;
+        // 부드럽게 떠다니는 움직임
+        wmX = `(w-text_w)/2 + sin(t*0.4)*w*0.15`;
+        wmY = `h*0.15 + cos(t*0.3)*h*0.08`;
         break;
     }
 
@@ -4833,14 +4374,8 @@ async function composeFinalVideo({
       const ttsDuration = await getMediaDuration(ttsPath);
       if (ttsDuration > videoDuration + 0.3) {
         // TTS가 영상보다 0.3초 이상 길면 → 영상 끝에서 TTS 끝까지 연장
-        // 🆕 여유 0.2 → 0.5초 (마지막 자막 표시 시간 확보)
-        finalDuration = ttsDuration + 0.5;
-        console.log(`[compose] 🎯 TTS(${ttsDuration.toFixed(2)}s) > 영상(${videoDuration.toFixed(2)}s) → 영상 ${finalDuration.toFixed(2)}초까지 연장 (마지막 말/자막 잘림 방지)`);
-      } else if (ttsDuration > videoDuration - 0.3) {
-        // 🆕 TTS가 영상과 거의 같거나 살짝 짧으면 → 영상에 +0.3초 여유
-        // (마지막 자막이 영상 끝 직전에 있을 때 잘림 방지)
-        finalDuration = videoDuration + 0.3;
-        console.log(`[compose] 🎯 TTS(${ttsDuration.toFixed(2)}s) ≈ 영상(${videoDuration.toFixed(2)}s) → 영상 +0.3초 여유 (${finalDuration.toFixed(2)}s)`);
+        finalDuration = ttsDuration + 0.2; // 0.2초 여유 (완전히 끝나고 1~2프레임 남김)
+        console.log(`[compose] 🎯 TTS(${ttsDuration.toFixed(2)}s) > 영상(${videoDuration.toFixed(2)}s) → 영상 ${finalDuration.toFixed(2)}초까지 연장 (마지막 말 잘림 방지)`);
       }
     } catch (e) {
       console.warn('[compose] TTS 길이 측정 실패:', e.message);
@@ -4866,11 +4401,12 @@ async function composeFinalVideo({
       '-filter_complex_script', filterScriptPath,
       '-map', '[final]',
       '-map', '[aout]',
-      // 🆕 속도 우선: preset fast + crf 20 (품질 거의 유지, 2~3배 빠름)
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21',
+      // 🆕 고화질 설정: preset medium (품질↑) + crf 18 (거의 무손실)
+      // + 비트레이트 명시 (8Mbps) = 인스타/틱톡 쇼츠 권장 고화질
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
       '-b:v', '8M', '-maxrate', '10M', '-bufsize', '16M',
       '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
-      '-c:a', 'aac', '-b:a', '256k',
+      '-c:a', 'aac', '-b:a', '320k',  // 오디오도 320k로 업 (192k → 320k)
       '-t', finalDuration.toFixed(3),
       outputPath
     );
@@ -4879,11 +4415,11 @@ async function composeFinalVideo({
       '-filter_complex_script', filterScriptPath,
       '-map', '[final]',
       '-map', ttsPath ? '1:a' : '0:a',
-      // 🆕 속도 우선 (동일)
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21',
+      // 🆕 고화질 설정
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
       '-b:v', '8M', '-maxrate', '10M', '-bufsize', '16M',
       '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.0',
-      '-c:a', 'aac', '-b:a', '256k',
+      '-c:a', 'aac', '-b:a', '320k',
       '-t', finalDuration.toFixed(3),
       '-af', 'apad',
       outputPath
@@ -5173,16 +4709,9 @@ function parseVisionResponse(text) {
 
 function generateCoupangLink(keyword, partnerCode) {
   const encoded = encodeURIComponent(keyword);
-  // 🔒 관리자 lptag가 설정돼 있으면 무조건 그걸로 (유저 코드 무시)
-  const effectiveCode = (ADMIN_COUPANG_LPTAG && ADMIN_COUPANG_LPTAG !== 'ADMIN_LPTAG_HERE')
-    ? ADMIN_COUPANG_LPTAG
-    : partnerCode;
-  // 🆕 쿠팡 검색 페이지 URL + lptag 트래킹 파라미터
-  // (AFFSDP 단축링크는 승인된 파트너스 회원만 사용 가능 → 일반 검색 URL 사용)
-  if (effectiveCode) {
-    return `https://www.coupang.com/np/search?q=${encoded}&lptag=${effectiveCode}`;
-  }
-  return `https://www.coupang.com/np/search?q=${encoded}`;
+  // 🔧 가짜 단축 링크 만들지 말고 진짜 쿠팡 검색 페이지 URL 사용
+  // partnerCode는 deeplink API로 추후 변환 시 사용 (여기서는 단순 검색 링크만)
+  return `https://www.coupang.com/np/search?q=${encoded}&channel=user`;
 }
 
 async function extractKeyword(text, config) {
@@ -5297,10 +4826,6 @@ ${text.substring(0, 1500)}
 
 // ===== 메인 처리 =====
 async function processVideo({ url, config, workDir, jobId, onProgress }) {
-  // 🆕 [TIME] 전체 처리 시간 측정 시작
-  const __t0_total = Date.now();
-  console.log(`[TIME] ⏱️ 전체 처리 시작 (jobId=${jobId})`);
-
   // 🆕 이 job의 모든 runCommand 호출이 자동으로 jobId 추적하도록 (취소 시 kill 가능)
   global.__currentProcessorJobId = jobId;
   
@@ -5413,9 +4938,7 @@ async function processVideo({ url, config, workDir, jobId, onProgress }) {
     if (!config.groqApiKey) {
       throw new Error('STT(음성 인식)는 Groq Whisper를 사용합니다. 설정 탭에서 Groq API 키를 입력해주세요. (무료)');
     }
-    const __t0_stt = Date.now();
-    transcription = await transcribeAudio(audioPath, sourceLang, config, onProgress);
-    console.log(`[TIME] STT 완료: ${((Date.now() - __t0_stt) / 1000).toFixed(1)}초`);
+    transcription = await transcribeAudio(audioPath, sourceLang, config.groqApiKey, onProgress);
     detectedLang = transcription.language;
   }
 
@@ -5518,32 +5041,7 @@ async function processVideo({ url, config, workDir, jobId, onProgress }) {
       
       // 🔴 마침표 제거 후처리 (마침표 → 느낌표 또는 제거)
       adCopy = adCopy.replace(/。/g, '!').replace(/\.(?!\d)/g, '!').replace(/!+/g, '!');
-
-      // 🆕 [FINAL HARD LIMIT - strict] 사용자 의도 존중하되 영상 길이 초과만 막음
-      try {
-        const _hardSec = parseVideoDuration(
-          config.videoDurationText || config.videoDurationSec
-        ) || videoDuration || 30;
-        const _hardOption = config.captionBreathOption === 'long' ? 'long' : 'short';
-        // 영상 길이 기준 maxChars만 체크 (사용자 입력 그대로 두되, 절대 초과 방지)
-        const cps = getCharsPerSecond(targetLang) * 1.15;
-        const hardCap = Math.floor((_hardSec - 0.5) * cps);
-        if (adCopy.replace(/\n/g, '').length > hardCap) {
-          const beforeHard = adCopy;
-          adCopy = hardLimitShoppingScript(adCopy, _hardSec, _hardOption);
-          console.log('[FINAL SCRIPT CHECK - strict]', {
-            videoDurationSec: _hardSec,
-            beforeChars: beforeHard.replace(/\n/g, '').length,
-            afterChars: adCopy.replace(/\n/g, '').length,
-            hardCap,
-          });
-        } else {
-          console.log(`[FINAL SCRIPT - strict] 사용자 대본이 영상 길이 안 초과 (${adCopy.replace(/\n/g, '').length}/${hardCap}자) → 그대로 사용`);
-        }
-      } catch (e) {
-        console.warn('[FINAL HARD LIMIT - strict] 실패 (무시):', e.message);
-      }
-
+      
       fullTranslation = adCopy;
       console.log(`[product] 최종 대본 (strict): ${adCopy.length}자`);
 
@@ -5598,9 +5096,7 @@ ${originalFullText || '(원본 음성 없음)'}`;
       }
 
       // 4-1. 광고 카피 생성
-      const __t0_adcopy = Date.now();
       adCopy = await generateAdCopy(combinedText, videoDuration, targetLang, config, onProgress);
-      console.log(`[TIME] 대본 생성 완료: ${((Date.now() - __t0_adcopy) / 1000).toFixed(1)}초`);
 
       // 🆕 대본 편집 콜백이 있으면 사용자 확정 대기
       if (config.__waitForScriptConfirm && typeof config.__waitForScriptConfirm === 'function') {
@@ -5610,41 +5106,91 @@ ${originalFullText || '(원본 음성 없음)'}`;
         const confirmedScript = await config.__waitForScriptConfirm(adCopy, combinedText);
         
         if (confirmedScript && confirmedScript.trim()) {
-          console.log(`[product] ✅ 사용자 확정 대본 수신: ${confirmedScript.length}자 → 그대로 사용 (rewrite 안 함)`);
+          console.log(`[product] ✅ 사용자 확정 대본 수신: ${confirmedScript.length}자`);
           adCopy = confirmedScript.trim();
-          // 🆕 rewrite 비활성화: 사용자가 본 대본이 그대로 더빙으로 들어가야 함
-          // 영상 길이 초과 시에만 TTS 직전의 finalizeShoppingScript가 자름
         } else {
           console.log('[product] ⚠️ 사용자가 대본 수정 없이 확정');
         }
       }
 
-    // 🔴 길이 안전장치 (hardLimit과 일치, 영상 길이에 맞게)
-    // 14초 → 180자, 25초 → 270자... (hardLimitShoppingScript와 동일 한도)
-    let maxSafeChars;
-    if (videoDuration <= 15) maxSafeChars = 180;
-    else if (videoDuration <= 25) maxSafeChars = 270;
-    else if (videoDuration <= 35) maxSafeChars = 350;
-    else if (videoDuration <= 45) maxSafeChars = 430;
-    else if (videoDuration <= 60) maxSafeChars = 540;
-    else maxSafeChars = 750;
-
-    // 🆕 하한: 영상 길이의 50% 정도. 너무 짧으면 LLM 다시 호출 안 함 (반복 폭주 방지)
+    // 🔴 길이 안전장치
     const cpsForCheck = getCharsPerSecond(targetLang);
-    const minSafeChars = Math.floor((videoDuration - 0.5) * cpsForCheck * 0.5);
+    const maxSafeChars = Math.floor(videoDuration * cpsForCheck * 1.2);
+    const minSafeChars = Math.floor(videoDuration * cpsForCheck * 0.85); // 영상의 85% 이상 채워야 함
 
-    // (A) 너무 길면 → 첫줄(후킹)/마지막줄(CTA) 보호하고 중간만 잘라냄
+    // (A) 너무 길면 뒤를 잘라냄
     if (adCopy.length > maxSafeChars) {
-      console.warn(`[product] 카피 길이 초과 (${adCopy.length}자 > 한계 ${maxSafeChars}자). 중간 줄 잘라냄.`);
-      const before = adCopy.length;
-      adCopy = _smartTrimKeepStructure(adCopy, maxSafeChars);
-      console.log(`[product] 잘라낸 결과: ${adCopy.length}자 (${before - adCopy.length}자 제거), ${adCopy.split('\n').filter(l=>l.trim()).length}줄`);
+      console.warn(`[product] 카피 길이 초과 (${adCopy.length}자 > 한계 ${maxSafeChars}자). 뒷부분 잘라냄.`);
+      const linesArr = adCopy.split('\n').filter(l => l.trim());
+      const truncated = [];
+      let charCount = 0;
+      for (const line of linesArr) {
+        if (charCount + line.length > maxSafeChars) break;
+        truncated.push(line);
+        charCount += line.length;
+      }
+      adCopy = truncated.join('\n');
+      console.log(`[product] 잘라낸 결과: ${adCopy.length}자, ${truncated.length}줄`);
     }
 
-    // (B) 🔴 너무 짧으면 → 그냥 짧은 대로 사용 (LLM 추가 생성 안 함)
-    //    추가 생성하면 LLM이 같은 말을 반복하며 폭주하는 문제 발생 (2026.04 수정)
+    // (B) 🔴 너무 짧으면 LLM에 추가 생성 요청 (영상 길이 채우기)
     if (adCopy.length < minSafeChars) {
-      console.log(`[product] 카피가 영상 길이보다 짧음 (${adCopy.length}자 < ${minSafeChars}자). 그대로 사용 (추가 생성 안 함).`);
+      const shortage = minSafeChars - adCopy.length;
+      const targetExtraChars = Math.floor((maxSafeChars - adCopy.length) * 0.8); // 여유 있게
+      console.warn(`[product] 카피 길이 부족 (${adCopy.length}자 < 최소 ${minSafeChars}자). ${targetExtraChars}자 추가 생성 요청.`);
+      onProgress('translate', 56, '✍️ 영상 길이 맞춰 카피 추가 중...');
+
+      try {
+        const extendPrompt = targetLang === 'ko' ? `다음은 쇼츠 광고 카피입니다. 영상 길이가 남아서 추가 카피가 필요합니다.
+
+**기존 카피:**
+${adCopy}
+
+**작업:**
+- 위 카피의 끝 부분에 자연스럽게 이어지는 추가 카피 약 ${targetExtraChars}자 작성
+- 같은 톤 유지 (친구한테 추천하는 듯한 느낌)
+- 사용 후기, 추가 장점, 비교, 팁, CTA 등으로 자연스럽게 채움
+- 중간중간 감정 표현/추임새 추가
+- 광고가 더 풍성해지도록 (중복 X)
+
+**출력:**
+- 한 문장씩 줄바꿈. 한 줄에 20~30자 정도.
+- 마침표(.) 금지! 느낌표(!)나 물결(~)로 끝내기
+- 라벨/번호/마크다운 금지.` : `Extend this shorts ad copy with about ${targetExtraChars} more characters.
+
+**Existing:**
+${adCopy}
+
+Continue naturally in the same tone. One sentence per line. No labels.`;
+
+        const extra = await callLLM([{ role: 'user', content: extendPrompt }], config);
+        const extraCleaned = extra
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => l && !l.startsWith('**') && !l.startsWith('##') && !l.startsWith('━'))
+          .map(l => l.replace(/^[-•*\d\.]+\s*/, ''))
+          .join('\n');
+
+        if (extraCleaned && extraCleaned.length > 10) {
+          adCopy = adCopy + '\n' + extraCleaned;
+          console.log(`[product] 추가 카피 합쳐짐: 총 ${adCopy.length}자`);
+
+          // 추가했는데도 maxSafe 초과하면 다시 잘라냄
+          if (adCopy.length > maxSafeChars) {
+            const linesArr = adCopy.split('\n').filter(l => l.trim());
+            const truncated = [];
+            let cc = 0;
+            for (const line of linesArr) {
+              if (cc + line.length > maxSafeChars) break;
+              truncated.push(line);
+              cc += line.length;
+            }
+            adCopy = truncated.join('\n');
+          }
+        }
+      } catch (e) {
+        console.warn('[product] 카피 추가 생성 실패 (무시):', e.message);
+      }
     }
 
     // 🔴 마무리 멘트 추가 (outroText가 있으면)
@@ -5673,37 +5219,9 @@ ${originalFullText || '(원본 음성 없음)'}`;
     
     // 빈 줄 정리
     adCopy = adCopy.split('\n').map(l => l.trim()).filter(Boolean).join('\n');
-
-    // 🆕 [FINAL HARD LIMIT] TTS 진입 직전 강제 제한 (LLM 결과 무시하고 영상 길이로 강제)
-    // 영상 길이를 절대 초과하지 않도록 마지막 안전망
-    try {
-      const _hardSec = parseVideoDuration(
-        config.videoDurationText || config.videoDurationSec
-      ) || videoDuration || 30;
-      const _hardOption = config.captionBreathOption === 'long' ? 'long' : 'short';
-      const beforeHard = adCopy;
-
-      // 🆕 [FINAL SCRIPT LOCKED] 단일 기준 데이터로 확정
-      // 이후 TTS와 자막은 모두 이 텍스트 하나만 보고 만든다
-      const _finalScript = finalizeShoppingScript(adCopy, _hardSec, _hardOption);
-      adCopy = _finalScript.text;
-
-      console.log('[FINAL SCRIPT LOCKED]', {
-        videoDurationSec: _finalScript.videoDurationSec,
-        option: _finalScript.option,
-        lines: _finalScript.lines.length,
-        chars: _finalScript.chars,
-        beforeChars: beforeHard.replace(/\n/g, '').length,
-        beforeLines: beforeHard.split('\n').filter(Boolean).length,
-      });
-      console.log('[FINAL SCRIPT]\n' + adCopy);
-      console.log('[CHECK BEFORE TTS]', _finalScript);
-    } catch (e) {
-      console.warn('[FINAL SCRIPT LOCK] 실패 (무시, 원본 사용):', e.message);
-    }
-
+    
     fullTranslation = adCopy;
-    console.log(`[product] 최종 대본 (LOCKED): ${adCopy.length}자`);
+    console.log(`[product] 최종 대본 (reference): ${adCopy.length}자`);
 
       // 4-2. 세그먼트 변환
       // 🆕 스마트 호흡: 문장 끝 여부로 호흡 결정
@@ -6084,25 +5602,6 @@ ${originalFullText || '(원본 음성 없음)'}`;
   let audioTrackPath;
   let displaySegments;
 
-  // 🆕 마지막 자막 강제 보정 헬퍼
-  // ASS/SRT 만들기 직전에 호출. 마지막 자막이 영상 끝까지 표시되도록 보장.
-  const fixLastSubtitle = (segments, videoLen) => {
-    if (!segments || segments.length === 0) return segments;
-    const last = segments[segments.length - 1];
-    // 1. 끝시간 무조건 영상 끝까지
-    last.end = videoLen;
-    // 2. 최소 표시시간 1초 보장
-    if (last.end - last.start < 1.0) {
-      last.start = Math.max(0, last.end - 1.0);
-    }
-    // 3. 이전 자막과 겹침 방지
-    if (segments.length >= 2) {
-      const prev = segments[segments.length - 2];
-      if (last.start < prev.end) last.start = prev.end;
-    }
-    return segments;
-  };
-
   // 🎬 reaction 모드: hybrid(더빙+원본 믹스) / dub(더빙만) / original(자막만)
   const reactionDub = videoType === 'reaction' && config.reactionAudioMode !== 'original';
   const reactionOriginal = videoType === 'reaction' && config.reactionAudioMode === 'original';
@@ -6281,10 +5780,36 @@ ${originalFullText || '(원본 음성 없음)'}`;
       
       console.log(`[TTS] 외부 TTS 적용 완료: ${ttsDuration.toFixed(1)}초`);
     } else {
-      // ElevenLabs 사용 여부 확인
-      const useElevenLabs = config.elevenLabsVoice && config.elevenLabsApiKey;
-      if (useElevenLabs) {
-        console.log(`[TTS] ElevenLabs 사용: ${config.elevenLabsVoice.name || config.elevenLabsVoice.voiceId}`);
+      // 🆕 ttsProvider 라디오 우선 - 명시적 선택 존중
+      const provider = (config.ttsProvider || '').toLowerCase();
+      const useTypecast = (provider === 'typecast') && config.typecastVoice && config.typecastApiKey;
+      const useElevenLabs = !useTypecast && (
+        (provider === 'elevenlabs') || 
+        (provider !== 'edge' && config.elevenLabsVoice && config.elevenLabsApiKey)
+      ) && config.elevenLabsVoice && config.elevenLabsApiKey;
+      
+      // 🔧 진단 로그 - TTS Provider 선택 조건 상세
+      console.log('========================================');
+      console.log('[TTS Provider 진단]');
+      console.log('========================================');
+      console.log('  ttsProvider (raw):', config.ttsProvider);
+      console.log('  provider (lower):', provider);
+      console.log('  config.typecastVoice 있나?:', config.typecastVoice ? '✅ 예' : '❌ 아니오');
+      if (config.typecastVoice) {
+        console.log('    voiceId:', config.typecastVoice.voiceId);
+        console.log('    name:', config.typecastVoice.name);
+      }
+      console.log('  config.typecastApiKey 있나?:', config.typecastApiKey ? `✅ 예 (${config.typecastApiKey.length}자)` : '❌ 아니오');
+      console.log('  → useTypecast:', useTypecast);
+      console.log('  → useElevenLabs:', useElevenLabs);
+      console.log('========================================');
+      
+      if (useTypecast) {
+        console.log(`[TTS] 🎙️ 타입캐스트 사용: ${config.typecastVoice.name || config.typecastVoice.voiceId}`);
+      } else if (useElevenLabs) {
+        console.log(`[TTS] 🎙️ ElevenLabs 사용: ${config.elevenLabsVoice.name || config.elevenLabsVoice.voiceId}`);
+      } else {
+        console.log(`[TTS] 🎙️ Edge TTS (무료) 사용`);
       }
     
       if (!isDrama && videoType === 'product') {
@@ -6326,37 +5851,42 @@ ${originalFullText || '(원본 음성 없음)'}`;
         
         const segAudioPath = path.join(jobDir, `tts_${gi}.mp3`);
         
-        // 🆕 재시도 로직 (최대 2번 시도) + 호출당 30초 타임아웃
-        const ttsTimeoutMs = 30000;
-        const withTimeout1 = (promise, label) => Promise.race([
-          promise,
-          new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} 타임아웃 (30s)`)), ttsTimeoutMs))
-        ]);
-
+        // 🆕 재시도 로직 (최대 2번 시도)
         let ttsSuccess = false;
         for (let attempt = 1; attempt <= 2 && !ttsSuccess; attempt++) {
           try {
-            if (useElevenLabs) {
+            if (useTypecast) {
+              // 🆕 타입캐스트 TTS
+              onProgress('tts', 60 + (gi / groupIds.length) * 8,
+                `🎙️ 타입캐스트 ${gi + 1}/${groupIds.length}`);
+              await generateTypecastTTS(
+                combinedText,
+                config.typecastVoice.voiceId,
+                segAudioPath,
+                config.typecastApiKey,
+                onProgress
+              );
+            } else if (useElevenLabs) {
               // ElevenLabs TTS
               onProgress('tts', 60 + (gi / groupIds.length) * 8,
                 `✨ ElevenLabs ${gi + 1}/${groupIds.length}`);
-              await withTimeout1(generateElevenLabsTTS(
+              await generateElevenLabsTTS(
                 combinedText,
                 config.elevenLabsVoice.voiceId,
                 segAudioPath,
                 config.elevenLabsApiKey,
                 onProgress
-              ), `ElevenLabs ${gi}`);
+              );
             } else {
               // Edge TTS (무료)
               onProgress('tts', 60 + (gi / groupIds.length) * 8,
                 `음성 ${gi + 1}/${groupIds.length} (${combinedText.length}자)`);
-              await withTimeout1(runCommand(edgeTts, [
+              await runCommand(edgeTts, [
                 '--voice', ttsVoice,
                 '--rate', '+10%',
                 '--text', combinedText,
                 '--write-media', segAudioPath,
-              ]), `Edge TTS ${gi}`);
+              ]);
             }
             
             // 파일 생성 확인
@@ -6411,12 +5941,12 @@ ${originalFullText || '(원본 음성 없음)'}`;
           ]);
 
           // 🔙 레퍼런스 영상 기준 원래 설정으로 복원
-          // 끝부분만 silenceremove (시작은 비활성 - 첫 글자 잘림 방지)
+          // 앞뒤 모두 silenceremove (공백 0.16초 수준의 자연스러운 광고 속도)
           try {
             await runCommand(ffmpeg, [
               '-y',
               '-i', rawAudioPath,
-              '-af', 'silenceremove=start_periods=0:stop_periods=-1:stop_duration=0.08:stop_threshold=-40dB',
+              '-af', 'silenceremove=start_periods=1:start_duration=0.08:start_threshold=-40dB:stop_periods=-1:stop_duration=0.08:stop_threshold=-40dB',
               '-c:a', 'libmp3lame',
               '-b:a', '192k',
               lineAudioPath,
@@ -6456,14 +5986,11 @@ ${originalFullText || '(원본 음성 없음)'}`;
     const protectedLines = outroLineCount; // 마지막 멘트 줄 수만큼 보호
 
     // 🔴 TTS가 영상보다 길면 → 자르지 말고 TTS 속도 높여서 재생성
-    // 🆕 재생성은 최대 1회만 (무한 루프 방지)
-    let ttsRetryDone = false;
-    if (totalTtsDuration > videoLen + 0.5 && !ttsRetryDone) {
-      ttsRetryDone = true;  // 명시적 1회 락
+    if (totalTtsDuration > videoLen + 0.5) {
       const overrun = totalTtsDuration - videoLen;
       const speedupPercent = Math.min(30, Math.ceil((overrun / videoLen) * 100) + 5);
       console.warn(`[tts] TTS(${totalTtsDuration.toFixed(1)}s)가 영상(${videoLen.toFixed(1)}s)보다 ${overrun.toFixed(1)}초 김`);
-      console.log(`[tts] → 1회 재생성 시작: 속도 +${15 + speedupPercent}%`);
+      console.log(`[tts] → 내용 자르지 않고 TTS 속도 +${15 + speedupPercent}%로 재생성`);
       
       // 모든 TTS 파일 삭제 후 더 빠른 속도로 재생성
       for (const tl of ttsLines) {
@@ -6472,67 +5999,38 @@ ${originalFullText || '(원본 음성 없음)'}`;
       ttsLines.length = 0;
       
       const newRate = `+${15 + speedupPercent}%`;
-
-      // 🆕 한 줄당 30초 타임아웃 (TTS 한 줄은 보통 1~3초)
-      const ttsTimeoutMs = 30000;
-      const withTimeout = (promise, label) => Promise.race([
-        promise,
-        new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} 타임아웃 (${ttsTimeoutMs/1000}s)`)), ttsTimeoutMs))
-      ]);
-
       for (let i = 0; i < parsedLines.length; i++) {
         const pl = parsedLines[i];
         const rawAudioPath = path.join(jobDir, `product_${i}_raw.mp3`);
         const lineAudioPath = path.join(jobDir, `product_${i}.mp3`);
         try {
-          await withTimeout(runCommand(edgeTts, [
+          await runCommand(edgeTts, [
             '--voice', pl.voice,
             '--rate', newRate,
             '--text', pl.text,
             '--write-media', rawAudioPath,
-          ]), `TTS 재생성 라인 ${i}`);
+          ]);
           // 🔙 레퍼런스 기준 복원
           try {
-            await withTimeout(runCommand(ffmpeg, [
+            await runCommand(ffmpeg, [
               '-y', '-i', rawAudioPath,
-              '-af', 'silenceremove=start_periods=0:stop_periods=-1:stop_duration=0.08:stop_threshold=-40dB',
+              '-af', 'silenceremove=start_periods=1:start_duration=0.08:start_threshold=-40dB:stop_periods=-1:stop_duration=0.08:stop_threshold=-40dB',
               '-c:a', 'libmp3lame', '-b:a', '192k',
               lineAudioPath,
-            ]), `silenceremove 라인 ${i}`);
+            ]);
             const trimmedDur = await getMediaDuration(lineAudioPath);
             if (trimmedDur < 0.2) fs.copyFileSync(rawAudioPath, lineAudioPath);
           } catch { fs.copyFileSync(rawAudioPath, lineAudioPath); }
           try { fs.unlinkSync(rawAudioPath); } catch (e) {}
-
+          
           const dur = await getMediaDuration(lineAudioPath);
           ttsLines.push({ path: lineAudioPath, duration: dur, text: pl.text });
         } catch (e) {
-          // 🆕 타임아웃이든 다른 에러든 그 줄만 스킵하고 계속 진행 (전체 멈춤 방지)
-          console.error(`[tts] 재생성 실패/타임아웃 (${i}/${parsedLines.length}):`, e.message, '→ 이 줄 스킵');
+          console.error('TTS 재생성 실패:', i, e.message);
         }
       }
       totalTtsDuration = ttsLines.reduce((s, tl) => s + tl.duration, 0);
       console.log(`[tts] 재생성 후: ${totalTtsDuration.toFixed(1)}s`);
-
-      // 🆕 +30% 속도 올려도 여전히 영상보다 길면 → 마지막 줄부터 자르기
-      // 단, outroText(마무리 멘트)는 보호
-      if (totalTtsDuration > videoLen + 0.3) {
-        console.warn(`[tts] +속도로도 영상 초과 (${totalTtsDuration.toFixed(1)}s > ${videoLen.toFixed(1)}s). 줄 단위로 잘라냅니다.`);
-        // 보호할 마지막 줄 수 (outroLineCount)
-        const protectedCount = protectedLines || 0;
-        // 자를 수 있는 영역: 인덱스 0 ~ (length - protectedCount)
-        while (totalTtsDuration > videoLen + 0.3 && ttsLines.length > 1) {
-          const cutTargetIdx = ttsLines.length - protectedCount - 1;
-          if (cutTargetIdx < 1) break; // 첫 줄(후킹)은 보호
-          const removed = ttsLines.splice(cutTargetIdx, 1)[0];
-          if (removed) {
-            try { fs.unlinkSync(removed.path); } catch (e) {}
-            console.log(`[tts] 잘라냄: "${(removed.text || '').slice(0, 30)}..." (${removed.duration.toFixed(2)}s)`);
-          }
-          totalTtsDuration = ttsLines.reduce((s, tl) => s + tl.duration, 0);
-        }
-        console.log(`[tts] 자른 후: ${ttsLines.length}줄, ${totalTtsDuration.toFixed(1)}s`);
-      }
     }
 
     const placed = [];
@@ -6569,28 +6067,18 @@ ${originalFullText || '(원본 음성 없음)'}`;
         currentTime += tl.duration + gapBetween;
       }
       console.log(`[drama] 영상 ${videoLen.toFixed(1)}초, TTS ${totalTtsDuration.toFixed(1)}초, ${ttsLines.length}줄, 라인간 ${gapBetween.toFixed(2)}초, 시작 패딩 ${startPadding.toFixed(1)}초`);
-      // 🆕 진단용: F12 콘솔(renderer)에도 강제 표시
-      try {
-        onProgress('debug', 50, `🔍 [DEBUG-GAP-DRAMA] 호흡=${gapBetween.toFixed(2)}초 / 영상=${videoLen.toFixed(1)}초 / TTS=${totalTtsDuration.toFixed(1)}초 / 줄=${ttsLines.length} ⚠️드라마분기진입!`);
-      } catch (e) {}
     } else {
       // 제품 모드 or TTS가 영상보다 긴 경우: 연속 배치
       // 🔴 GAP 0: 각 문장을 텀 없이 바로 이어붙임 (광고 카피 템포 중요)
       //    TTS 앞뒤 무음은 silenceremove로 트림해서 더 빡빡하게
       
-      // 🔴 TTS가 영상보다 짧으면 → 영상 끝에 약간 비어도 OK (호흡은 절대 늘리지 않음)
+      // 🔴 TTS가 영상보다 짧으면 → 문장 사이에 간격 추가해서 채우기
       const shortfall = videoLen - totalTtsDuration;
       
       // 🔙 레퍼런스 영상 분석 결과: 문장 사이 0.16초 무음 간격
-      // 🆕 0.15 → 0.07로 단축 (광고 호흡 더 빡빡하게, 줄당 0.08초 절약)
-      // ⚠️ 호흡은 절대 늘리지 않는다 (영상이 더빙보다 길면 끝에 빈 시간 OK)
-      const PRODUCT_TTS_GAP_SEC = 0.05;
-      const GAP = PRODUCT_TTS_GAP_SEC;
-      console.log(`[tts] 문장 사이 호흡: ${GAP}초 (고정, shortfall=${shortfall.toFixed(2)}초는 영상 끝 여백 처리)`);
-      // 🆕 진단용: F12 콘솔(renderer)에도 강제 표시
-      try {
-        onProgress('debug', 50, `🔍 [DEBUG-GAP] 호흡=${GAP}초 / 영상=${videoLen.toFixed(1)}초 / TTS=${totalTtsDuration.toFixed(1)}초 / shortfall=${shortfall.toFixed(2)}초 / 줄=${ttsLines.length}`);
-      } catch (e) {}
+      // → GAP 0.15초로 맞춤 (레퍼런스와 동일한 자연스러운 광고 속도)
+      const GAP = 0.15;
+      console.log(`[tts] 문장 사이 호흡: ${GAP}초 (레퍼런스 기준)`);
       
       // TTS 시작은 바로
       let currentTime = 0;
@@ -6764,32 +6252,9 @@ ${originalFullText || '(원본 음성 없음)'}`;
     console.log(`[자막최종정리] ✅ "/" 없음 - 자막 청결`);
   }
 
-  // 🆕 마지막 자막 강제 보정 (ASS/SRT 만들기 직전, 모든 모드 공통)
-  // 영상 끝까지 표시 보장 + 최소 1초 + 이전 자막과 안 겹치게
-  // (영상 끝 -0.1초: 영상 마지막 1프레임에서 자막 잘림 방지)
-  // 🔴 finalVideoPath의 실제 길이 측정 (videoLen 스코프 밖이라 직접 측정)
-  const __finalVideoPath = config.__reactionVideoPath || config.__summaryVideoPath || originalPath;
-  let __finalVideoLen = 0;
-  try {
-    __finalVideoLen = await getMediaDuration(__finalVideoPath);
-  } catch (e) {
-    console.warn('[subtitle] 영상 길이 측정 실패:', e.message);
-  }
-  if (__finalVideoLen > 0) {
-    const safeVideoEnd = Math.max(0.5, __finalVideoLen - 0.1);
-    displaySegments = fixLastSubtitle(displaySegments, safeVideoEnd);
-    if (displaySegments && displaySegments.length > 0) {
-      const last = displaySegments[displaySegments.length - 1];
-      console.log(`[subtitle] 마지막 자막 강제 보정: ${last.start.toFixed(2)}~${last.end.toFixed(2)}s (영상 ${__finalVideoLen.toFixed(2)}s) "${(last.text || '').substring(0, 30)}..."`);
-    }
-  } else {
-    console.warn('[subtitle] 영상 길이 0 → 마지막 자막 보정 스킵');
-  }
-
   // 7. 합성
   // reaction 모드: 추출된 클립 사용 / summary 모드: 편집된 영상 사용 / 그 외: 원본
   const finalVideoPath = config.__reactionVideoPath || config.__summaryVideoPath || originalPath;
-  const __t0_compose = Date.now();
   await composeFinalVideo({
     videoPath: finalVideoPath,
     ttsPath: audioTrackPath,
@@ -6800,7 +6265,6 @@ ${originalFullText || '(원본 음성 없음)'}`;
     targetLang,
     onProgress,
   });
-  console.log(`[TIME] ffmpeg 합성 완료: ${((Date.now() - __t0_compose) / 1000).toFixed(1)}초`);
 
   // 7-1. BGM 믹싱 (설정된 경우)
   // 내장 BGM 매핑
@@ -7007,72 +6471,28 @@ ${originalFullText || '(원본 음성 없음)'}`;
 
     // 원본 + 번역 나란히 (세그먼트별)
     if (transcription.segments && transcription.segments.length > 0 && translatedSegments.length > 0) {
-      // 🆕 product/shopping 모드면 광고 카피와 원본 STT를 분리 표시
-      // (광고 카피는 TTS 타이밍 기준, 원본 STT는 별도 참고 섹션)
-      const isAdCopyMode = (mode === 'shopping' || videoType === 'product');
+      lines.push('-'.repeat(60));
+      lines.push('[세그먼트별 원문 / 번역 / 타임스탬프]');
+      lines.push('-'.repeat(60));
 
-      if (isAdCopyMode) {
-        // 1) 광고 카피 세그먼트 (displaySegments = TTS 타이밍 기준)
-        const adCopySegs = (typeof displaySegments !== 'undefined' && displaySegments && displaySegments.length > 0)
-          ? displaySegments
-          : translatedSegments;
+      const origSegs = transcription.segments;
+      for (let i = 0; i < Math.max(origSegs.length, translatedSegments.length); i++) {
+        const orig = origSegs[i];
+        const trans = translatedSegments[i];
+        if (!orig && !trans) continue;
 
-        lines.push('-'.repeat(60));
-        lines.push('[광고 카피 세그먼트 / TTS 타임스탬프]');
-        lines.push('-'.repeat(60));
+        const start = orig?.start ?? trans?.start ?? 0;
+        const end = orig?.end ?? trans?.end ?? 0;
         const formatTime = (t) => {
           const m = Math.floor(t / 60);
-          const s = (t % 60).toFixed(1);
-          return `${m}:${String(s).padStart(4, '0')}`;
+          const s = Math.floor(t % 60);
+          return `${m}:${String(s).padStart(2, '0')}`;
         };
-        for (const seg of adCopySegs) {
-          if (!seg || !seg.text) continue;
-          lines.push('');
-          lines.push(`[${formatTime(seg.start || 0)} - ${formatTime(seg.end || 0)}]`);
-          lines.push(`대본: ${seg.text.trim()}`);
-        }
 
-        // 2) 원본 STT 참고 섹션 (광고 카피와 섞지 않음)
         lines.push('');
-        lines.push('-'.repeat(60));
-        lines.push('[원본 STT 참고 (대본 생성 참고용)]');
-        lines.push('-'.repeat(60));
-        for (const orig of transcription.segments) {
-          if (!orig || !orig.text) continue;
-          const fmtSimple = (t) => {
-            const m = Math.floor(t / 60);
-            const s = Math.floor(t % 60);
-            return `${m}:${String(s).padStart(2, '0')}`;
-          };
-          lines.push('');
-          lines.push(`[${fmtSimple(orig.start || 0)} - ${fmtSimple(orig.end || 0)}]`);
-          lines.push(`원문: ${orig.text.trim()}`);
-        }
-      } else {
-        // 다른 모드(번역/예능/드라마): 기존 방식 유지 (원본+번역 나란히)
-        lines.push('-'.repeat(60));
-        lines.push('[세그먼트별 원문 / 번역 / 타임스탬프]');
-        lines.push('-'.repeat(60));
-
-        const origSegs = transcription.segments;
-        for (let i = 0; i < Math.max(origSegs.length, translatedSegments.length); i++) {
-          const orig = origSegs[i];
-          const trans = translatedSegments[i];
-          if (!orig && !trans) continue;
-
-          const start = orig?.start ?? trans?.start ?? 0;
-          const end = orig?.end ?? trans?.end ?? 0;
-          const formatTime = (t) => {
-            const m = Math.floor(t / 60);
-            const s = Math.floor(t % 60);
-            return `${m}:${String(s).padStart(2, '0')}`;
-          };
-
-          lines.push('');
-          lines.push(`[${formatTime(start)} - ${formatTime(end)}]`);
-          if (orig) lines.push(`원문: ${orig.text.trim()}`);
-          if (trans) lines.push(`번역: ${trans.text.trim()}`);
-        }
+        lines.push(`[${formatTime(start)} - ${formatTime(end)}]`);
+        if (orig) lines.push(`원문: ${orig.text.trim()}`);
+        if (trans) lines.push(`번역: ${trans.text.trim()}`);
       }
     }
 
@@ -7082,10 +6502,6 @@ ${originalFullText || '(원본 음성 없음)'}`;
   }
 
   onProgress('done', 100, '완료!');
-
-  // 🆕 [TIME] 전체 처리 시간 출력
-  const __totalSec = ((Date.now() - __t0_total) / 1000).toFixed(1);
-  console.log(`[TIME] ✅ 전체 처리 완료: ${__totalSec}초`);
 
   return {
     outputPath,
@@ -7103,4 +6519,257 @@ ${originalFullText || '(원본 음성 없음)'}`;
   };
 }
 
-module.exports = { processVideo, downloadVideo, transcribeAudio, LANGUAGES, VOICE_CATALOG, SUBTITLE_PRESETS, AVAILABLE_FONTS, SIZE_PRESETS, LLM_PROVIDERS };
+// ===== 🆕 쿠팡 파트너스 검색 기능 =====
+
+// HMAC-SHA256 서명 생성 (쿠팡 API 인증용)
+function _coupangSignature(method, urlPath, accessKey, secretKey) {
+  const now = new Date();
+  // 🔧 쿠팡 OpenAPI 정확한 datetime 형식: YYMMDDTHHMMSSZ (UTC 기준)
+  const datetime = 
+    now.getUTCFullYear().toString().substr(2, 2) +
+    String(now.getUTCMonth() + 1).padStart(2, '0') +
+    String(now.getUTCDate()).padStart(2, '0') +
+    'T' +
+    String(now.getUTCHours()).padStart(2, '0') +
+    String(now.getUTCMinutes()).padStart(2, '0') +
+    String(now.getUTCSeconds()).padStart(2, '0') +
+    'Z';
+  
+  const [pathPart, queryPart = ''] = urlPath.split('?');
+  const message = datetime + method + pathPart + queryPart;
+  const signature = crypto.createHmac('sha256', secretKey).update(message).digest('hex');
+  const authHeader = `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${datetime}, signature=${signature}`;
+  return authHeader;
+}
+
+// 쿠팡 상품 검색 (관리자 API 키 사용)
+async function searchCoupangProducts(keyword, limit = 10, adminApiKeys = null) {
+  if (!keyword || !keyword.trim()) {
+    throw new Error('검색어를 입력하세요');
+  }
+  
+  if (!adminApiKeys || !adminApiKeys.accessKey || !adminApiKeys.secretKey) {
+    throw new Error('🔑 관리자 쿠팡 API 키가 설정되지 않았습니다\n\n관리자에게 문의하세요');
+  }
+  
+  // 🔧 limit 안전 처리 (쿠팡 OpenAPI는 1~10 권장)
+  let safeLimit = parseInt(limit);
+  if (!safeLimit || isNaN(safeLimit) || safeLimit < 1) safeLimit = 10;
+  if (safeLimit > 10) safeLimit = 10;  // 쿠팡 제한: 최대 10
+  
+  console.log('[Coupang] 검색 시작:', { keyword, limit: safeLimit });
+  
+  const encodedKeyword = encodeURIComponent(keyword.trim());
+  const urlPath = `/v2/providers/affiliate_open_api/apis/openapi/products/search?keyword=${encodedKeyword}&limit=${safeLimit}`;
+  const fullUrl = 'https://api-gateway.coupang.com' + urlPath;
+  const auth = _coupangSignature('GET', urlPath, adminApiKeys.accessKey, adminApiKeys.secretKey);
+  
+  // 🔧 디버그 - axios 호출 직전 모든 값 출력
+  console.log('========================================');
+  console.log('[Coupang] axios 호출 직전:');
+  console.log('  fullUrl:', fullUrl);
+  console.log('  encodedKeyword:', encodedKeyword);
+  console.log('  safeLimit:', safeLimit);
+  console.log('  keyword (raw):', keyword);
+  console.log('  keyword char codes:', Array.from(keyword).map(c => c.charCodeAt(0)).join(','));
+  console.log('========================================');
+  
+  try {
+    const response = await axios.get(fullUrl, {
+      headers: {
+        'Authorization': auth,
+        'Content-Type': 'application/json;charset=UTF-8',
+      },
+      timeout: 15000,
+    });
+    
+    // 🔧 응답 받은 직후 로그
+    console.log('[Coupang] axios 응답 받음, status:', response.status);
+    console.log('[Coupang] response.data:', JSON.stringify(response.data).substring(0, 200));
+    
+    if (response.data?.rCode !== '0') {
+      throw new Error(response.data?.rMessage || '쿠팡 API 응답 오류');
+    }
+    
+    const products = response.data?.data?.productData || [];
+    
+    // 🔧 첫 번째 상품 전체 출력 (디버깅 - 쿠팡이 진짜 뭘 보내는지)
+    if (products.length > 0) {
+      console.log('========================================');
+      console.log('[Coupang] 첫 상품 raw 데이터:');
+      console.log(JSON.stringify(products[0], null, 2));
+      console.log('========================================');
+    }
+    
+    return products.map(p => {
+      // 🔧 productUrl이 단축 링크면 productId로 원본 URL 직접 생성
+      // 쿠팡 검색 API는 단축 링크를 반환하는데, 이걸 deeplink API에 다시 넣으면 거부됨
+      let cleanUrl = p.productUrl;
+      if (p.productId && (
+        !cleanUrl ||
+        cleanUrl.includes('link.coupang.com/re/') ||  // 단축 링크
+        cleanUrl.includes('ads-partners.coupang')      // 광고 링크
+      )) {
+        cleanUrl = `https://www.coupang.com/vp/products/${p.productId}`;
+      }
+      
+      return {
+        productId: p.productId,
+        productName: p.productName,
+        productPrice: p.productPrice,
+        productImage: p.productImage,
+        productUrl: cleanUrl,  // ← 원본 URL로 변환됨
+        originalShortenUrl: p.productUrl,  // 원본도 저장 (참고용)
+        categoryName: p.categoryName,
+        isRocket: p.isRocket,
+        isFreeShipping: p.isFreeShipping,
+      };
+    });
+  } catch (error) {
+    // 🔧 axios 에러 객체 통째로 dump
+    console.error('========================================');
+    console.error('[Coupang] axios 에러 객체 전체:');
+    console.error('========================================');
+    console.error('  error.message:', error.message);
+    console.error('  error.code:', error.code);
+    console.error('  error.name:', error.name);
+    console.error('  error.response 있나?:', error.response ? '예' : '아니오');
+    if (error.response) {
+      console.error('  error.response.status:', error.response.status);
+      console.error('  error.response.statusText:', error.response.statusText);
+      console.error('  error.response.data:', JSON.stringify(error.response.data));
+      console.error('  error.response.headers:', JSON.stringify(error.response.headers));
+    }
+    console.error('  error.request 있나?:', error.request ? '예' : '아니오');
+    console.error('  error.config?.url:', error.config?.url);
+    console.error('  error.config?.method:', error.config?.method);
+    console.error('  error.stack:', error.stack);
+    console.error('========================================');
+    
+    const status = error.response?.status;
+    const responseData = error.response?.data;
+    const errMsg = responseData?.rMessage || responseData?.message || error.message;
+    
+    // 🔧 상세 에러 로그 (디버깅용)
+    console.error('========================================');
+    console.error('[Coupang] 검색 오류 상세');
+    console.error('========================================');
+    console.error('  status:', status);
+    console.error('  errMsg:', errMsg);
+    console.error('  responseData:', JSON.stringify(responseData));
+    console.error('  fullError:', error.message);
+    console.error('========================================');
+    
+    if (status === 401 || status === 403) {
+      throw new Error('🔒 쿠팡 API 인증 실패\n\n관리자 API 키가 잘못되었거나 만료되었습니다');
+    } else if (status === 429) {
+      throw new Error('⏱️ 쿠팡 API 호출 한도 초과\n\n잠시 후 다시 시도하세요');
+    } else if (status === 400) {
+      throw new Error(`⚠️ 쿠팡 검색 요청 오류\n\n${errMsg}`);
+    } else if (!status) {
+      // 🔧 응답 자체가 없을 때만 진짜 네트워크 오류
+      // status는 없는데 errMsg에 "limit" 같은 게 있으면 사실 다른 문제
+      if (errMsg && errMsg.includes('limit')) {
+        throw new Error(`⚠️ 쿠팡 API 요청 오류: ${errMsg}`);
+      }
+      throw new Error('🌐 네트워크 연결 오류\n\n인터넷 연결을 확인하세요');
+    } else {
+      throw new Error(`쿠팡 검색 실패 (코드 ${status}): ${errMsg}`);
+    }
+  }
+}
+
+// 쿠팡 딥링크 발급 (사용자 본인 lptag만 사용, fallback 절대 X)
+async function generateCoupangDeeplink(productUrl, userLptag, adminApiKeys = null) {
+  if (!productUrl) throw new Error('상품 URL이 없습니다');
+  if (!userLptag || !userLptag.trim()) {
+    throw new Error('본인 추천 ID가 필요합니다\n\n설정에서 본인 쿠팡 파트너스 ID를 등록해주세요');
+  }
+  
+  if (!adminApiKeys || !adminApiKeys.accessKey || !adminApiKeys.secretKey) {
+    throw new Error('🔑 관리자 쿠팡 API 키가 설정되지 않았습니다');
+  }
+  
+  // 🔧 검색 결과 URL이 이미 파트너스 링크면 원본 쿠팡 URL로 변환
+  let cleanProductUrl = productUrl.trim();
+  
+  // 이미 파트너스 단축 링크면 그대로는 못 씀 → 원본 URL 추출 시도
+  // (검색 결과의 productUrl은 보통 https://link.coupang.com/re/... 같은 형태)
+  
+  console.log('========================================');
+  console.log('[Coupang] 딥링크 발급 시작:');
+  console.log('  productUrl (원본):', productUrl);
+  console.log('  cleanProductUrl:', cleanProductUrl);
+  console.log('  userLptag:', userLptag);
+  console.log('  userLptag.trim():', userLptag.trim());
+  console.log('========================================');
+  
+  const urlPath = '/v2/providers/affiliate_open_api/apis/openapi/v1/deeplink';
+  const fullUrl = 'https://api-gateway.coupang.com' + urlPath;
+  const auth = _coupangSignature('POST', urlPath, adminApiKeys.accessKey, adminApiKeys.secretKey);
+  
+  const body = { 
+    coupangUrls: [cleanProductUrl],
+    subId: userLptag.trim()
+  };
+  
+  console.log('[Coupang] body:', JSON.stringify(body));
+  
+  try {
+    const response = await axios.post(fullUrl, body, {
+      headers: {
+        'Authorization': auth,
+        'Content-Type': 'application/json;charset=UTF-8',
+      },
+      timeout: 15000,
+    });
+    
+    console.log('[Coupang] 딥링크 응답 status:', response.status);
+    console.log('[Coupang] 딥링크 response.data:', JSON.stringify(response.data));
+    
+    if (response.data?.rCode !== '0') {
+      // 🔧 rCode가 0이 아니면 - 응답 자체에 에러 메시지 있음
+      const apiErr = response.data?.rMessage || '쿠팡 딥링크 발급 실패';
+      console.error('[Coupang] API 비즈니스 에러:', response.data);
+      throw new Error(apiErr);
+    }
+    
+    const result = response.data?.data?.[0];
+    if (!result) throw new Error('딥링크 결과가 비어있습니다');
+    
+    console.log('[Coupang] ✅ 딥링크 발급 성공:', result);
+    
+    return {
+      shortenUrl: result.shortenUrl,
+      landingUrl: result.landingUrl,
+      originalUrl: result.originalUrl,
+    };
+  } catch (error) {
+    // 🔧 axios 에러 객체 통째로 dump
+    console.error('========================================');
+    console.error('[Coupang] 딥링크 axios 에러:');
+    console.error('========================================');
+    console.error('  error.message:', error.message);
+    console.error('  error.code:', error.code);
+    console.error('  error.response 있나?:', error.response ? '예' : '아니오');
+    if (error.response) {
+      console.error('  error.response.status:', error.response.status);
+      console.error('  error.response.data:', JSON.stringify(error.response.data));
+    }
+    console.error('========================================');
+    
+    const status = error.response?.status;
+    const responseData = error.response?.data;
+    const errMsg = responseData?.rMessage || responseData?.message || error.message;
+    
+    if (status === 401 || status === 403) {
+      throw new Error('🔒 쿠팡 API 인증 실패\n\n관리자 API 키를 확인하세요');
+    } else if (status === 429) {
+      throw new Error('⏱️ 쿠팡 API 호출 한도 초과\n\n잠시 후 다시 시도하세요');
+    } else {
+      throw new Error(`쿠팡 링크 발급 실패: ${errMsg}`);
+    }
+  }
+}
+
+module.exports = { processVideo, downloadVideo, transcribeAudio, LANGUAGES, VOICE_CATALOG, SUBTITLE_PRESETS, AVAILABLE_FONTS, SIZE_PRESETS, LLM_PROVIDERS, searchCoupangProducts, generateCoupangDeeplink };

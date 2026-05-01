@@ -97,6 +97,7 @@ function createWindow(htmlFile = 'login.html') {
 }
 
 app.whenReady().then(async () => {
+  logBinaryPaths();
   const authConfigPath = path.join(app.getPath('userData'), 'auth.json');
   authClient = new AuthClient(authConfigPath);
 
@@ -312,12 +313,41 @@ function getWorkDir() {
 // ===== 다중 영상/파일 합치기 =====
 const { spawn } = require('child_process');
 
+// ===== 내장 실행파일 경로 =====
+// 개발 모드: 프로젝트 루트의 ffmpeg.exe / ffprobe.exe / yt-dlp.exe 사용
+// 배포 모드: electron-builder extraResources 로 들어간 resources 폴더의 파일 사용
+function getBinaryPath(name) {
+  const isWin = process.platform === 'win32';
+  const fileName = isWin && !name.endsWith('.exe') ? `${name}.exe` : name;
+
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, fileName);
+  }
+
+  // src/main.js 기준 프로젝트 루트로 이동
+  return path.join(__dirname, '..', fileName);
+}
+
+const BIN = {
+  ytdlp: getBinaryPath('yt-dlp'),
+  ffmpeg: getBinaryPath('ffmpeg'),
+  ffprobe: getBinaryPath('ffprobe'),
+};
+
+function logBinaryPaths() {
+  console.log('[BIN] yt-dlp:', BIN.ytdlp, fs.existsSync(BIN.ytdlp) ? 'OK' : 'MISSING');
+  console.log('[BIN] ffmpeg:', BIN.ffmpeg, fs.existsSync(BIN.ffmpeg) ? 'OK' : 'MISSING');
+  console.log('[BIN] ffprobe:', BIN.ffprobe, fs.existsSync(BIN.ffprobe) ? 'OK' : 'MISSING');
+}
+
+
+
 async function mergeMultipleSources({ urls, uploadedFiles, workDir, jobId, onProgress, jobState }) {
   const tmpDir = path.join(workDir, `merge_${jobId}`);
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-  const ytDlp = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
-  const ffmpeg = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+  const ytDlp = BIN.ytdlp;
+  const ffmpeg = BIN.ffmpeg;
 
   const sourceFiles = [];
 
@@ -681,7 +711,7 @@ ipcMain.handle('get-builtin-bgm-path', (e, filename) => {
 });
 
 ipcMain.handle('get-video-duration', async (e, filePath) => {
-  const ffprobe = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+  const ffprobe = BIN.ffprobe;
   return new Promise((resolve) => {
     const proc = spawn(ffprobe, [
       '-v', 'error', '-show_entries', 'format=duration',
@@ -698,7 +728,7 @@ ipcMain.handle('get-video-duration', async (e, filePath) => {
 ipcMain.handle('get-url-video-duration', async (e, url) => {
   return new Promise((resolve) => {
     if (!url || typeof url !== 'string') return resolve({ success: false, duration: 0, error: 'URL 없음' });
-    const ytdlp = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+    const ytdlp = BIN.ytdlp;
     // --print duration: 영상 길이만 stdout으로
     // --no-download: 메타데이터만 (빠름)
     // --no-warnings: 경고 무시
@@ -741,8 +771,8 @@ ipcMain.handle('get-url-video-duration', async (e, url) => {
 // 영상 프레임 분석해서 원본 자막 위치 자동 찾기
 ipcMain.handle('detect-subtitle-area', async (event, videoInput) => {
   try {
-    const ffmpegPath = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
-    const ffprobe = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+    const ffmpegPath = BIN.ffmpeg;
+    const ffprobe = BIN.ffprobe;
     
     // videoInput: URL 또는 로컬 파일 경로
     const workDir = getWorkDir();
@@ -760,7 +790,7 @@ ipcMain.handle('detect-subtitle-area', async (event, videoInput) => {
     // URL이면 다운로드
     if (videoInput.startsWith('http://') || videoInput.startsWith('https://')) {
       sendProgress('📥 영상 일부 다운로드 중...');
-      const ytdlp = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+      const ytdlp = BIN.ytdlp;
       videoPath = path.join(jobDir, 'video.mp4');
       
       try {
@@ -1330,28 +1360,20 @@ ipcMain.handle('process-video', async (event, payload) => {
       return result.response === 0 ? 'generate' : 'cancel';
     };
 
-    // 🆕 제품 대본 편집 콜백 - renderer에 대본 보내고 확정 대기 (제품 모드만)
+    // 🆕 제품 대본 편집 콜백
+    // 이전 버전은 여기서 renderer에 show-script-editor를 보내고 사용자의 script-confirmed를 기다렸는데,
+    // preload에 확정 이벤트 전송 API가 없으면 영상 생성 중 UI가 3/4단계로 되돌아가고 작업이 멈출 수 있음.
+    // 배포 안정성을 위해 생성 중에는 모달 대기 없이 현재 확정 대본 또는 AI 생성 대본을 자동 확정한다.
     if (config.videoType === 'product') {
       config.__waitForScriptConfirm = async (generatedScript, videoTranscript) => {
-        return new Promise((resolve) => {
-          // renderer에 대본 편집 요청 보내기
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('show-script-editor', { 
-              jobId, 
-              generatedScript, 
-              videoTranscript 
-            });
-          }
-          
-          // 확정 이벤트 대기 (일회성 리스너)
-          const listener = (event, data) => {
-            if (data && data.jobId === jobId) {
-              ipcMain.removeListener('script-confirmed', listener);
-              resolve(data.confirmedScript);
-            }
-          };
-          ipcMain.on('script-confirmed', listener);
+        const userConfirmed = (config.productAdText || '').trim();
+        const finalScript = userConfirmed || (generatedScript || '').trim();
+        console.log('[product] 대본 자동 확정:', {
+          hasUserConfirmed: !!userConfirmed,
+          generatedLength: (generatedScript || '').length,
+          finalLength: finalScript.length,
         });
+        return finalScript;
       };
     }
 
@@ -1514,7 +1536,7 @@ ipcMain.handle('analyze-and-generate-script', async (event, params) => {
     } else if (isUrl) {
       // URL이면 yt-dlp로 다운로드
       sendProgress('📥 영상 다운로드 중...');
-      const ytdlp = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+      const ytdlp = BIN.ytdlp;
       
       try {
         await new Promise((resolve, reject) => {
@@ -1600,7 +1622,7 @@ ipcMain.handle('analyze-and-generate-script', async (event, params) => {
       sendProgress('📏 영상 길이 확인 중...');
       try {
         const { spawn } = require('child_process');
-        const ffprobe = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+        const ffprobe = BIN.ffprobe;
         videoDurationSec = await new Promise((resolve) => {
           const proc = spawn(ffprobe, ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath]);
           let out = '';
@@ -1623,21 +1645,9 @@ ipcMain.handle('analyze-and-generate-script', async (event, params) => {
     
     // 2. 오디오 추출 (이미지 전용 모드는 스킵)
     const audioPath = path.join(jobDir, 'audio.mp3');
-    let ffmpegPath = 'ffmpeg';
-    
+    const ffmpegPath = BIN.ffmpeg;
+
     if (!usingImagesOnly) {
-      try {
-        ffmpegPath = require('ffmpeg-static');
-      } catch (e) {
-        console.log('ffmpeg-static 없음, 시스템 ffmpeg 사용');
-      }
-      
-      // 🆕 ffmpeg 실행 파일 존재 확인
-      if (ffmpegPath && ffmpegPath !== 'ffmpeg' && !fs.existsSync(ffmpegPath)) {
-        console.warn(`[script-gen] ffmpeg-static 경로 존재하지 않음: ${ffmpegPath}, 시스템 ffmpeg로 폴백`);
-        ffmpegPath = 'ffmpeg';
-      }
-      
       console.log(`[script-gen] ffmpeg 경로: ${ffmpegPath}`);
       console.log(`[script-gen] 입력 영상: ${videoPath}`);
       console.log(`[script-gen] 출력 오디오: ${audioPath}`);
@@ -2657,7 +2667,7 @@ ipcMain.handle('extract-and-translate-script', async (event, videoUrl, targetLan
     if (isUrl) {
       // URL이면 yt-dlp로 다운로드
       sendProgress('📥 영상 다운로드 중...');
-      const ytdlp = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+      const ytdlp = BIN.ytdlp;
       
       try {
         await new Promise((resolve, reject) => {
@@ -2737,19 +2747,8 @@ ipcMain.handle('extract-and-translate-script', async (event, videoUrl, targetLan
     
     // 2. 오디오 추출
     const audioPath = path.join(jobDir, 'audio.mp3');
-    let ffmpegPath = 'ffmpeg';
-    try {
-      ffmpegPath = require('ffmpeg-static');
-    } catch (e) {
-      console.log('ffmpeg-static 없음, 시스템 ffmpeg 사용');
-    }
-    
-    // 🆕 ffmpeg 실행 파일 존재 확인
-    if (ffmpegPath && ffmpegPath !== 'ffmpeg' && !fs.existsSync(ffmpegPath)) {
-      console.warn(`[talking-script] ffmpeg-static 경로 존재하지 않음: ${ffmpegPath}, 시스템 ffmpeg로 폴백`);
-      ffmpegPath = 'ffmpeg';
-    }
-    
+    const ffmpegPath = BIN.ffmpeg;
+
     console.log(`[talking-script] ffmpeg 경로: ${ffmpegPath}`);
     console.log(`[talking-script] 입력 영상: ${videoPath}`);
     console.log(`[talking-script] 출력 오디오: ${audioPath}`);
@@ -3217,4 +3216,43 @@ ${script.substring(0, 500)}
 // ===== 🆕 랜덤 주제 추천 =====
 ipcMain.handle('get-random-topics', () => {
   return getRandomTopics();
+});
+
+// ===== 🆕 쿠팡 파트너스 검색/링크 발급 =====
+ipcMain.handle('coupang-search', async (event, payload) => {
+  try {
+    const { searchCoupangProducts } = require('./processor');
+    const keyword = (payload?.keyword || '').trim();
+    const limit = parseInt(payload?.limit) || 20;
+    const adminApiKeys = payload?.adminApiKeys || null;
+    
+    if (!keyword) {
+      return { success: false, error: '검색어를 입력하세요' };
+    }
+    
+    const products = await searchCoupangProducts(keyword, limit, adminApiKeys);
+    return { success: true, products };
+  } catch (err) {
+    console.error('[coupang-search] 오류:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('coupang-deeplink', async (event, payload) => {
+  try {
+    const { generateCoupangDeeplink } = require('./processor');
+    const productUrl = (payload?.productUrl || '').trim();
+    const userLptag = (payload?.userLptag || '').trim();
+    const adminApiKeys = payload?.adminApiKeys || null;
+    
+    if (!productUrl) {
+      return { success: false, error: '상품 URL이 없습니다' };
+    }
+    
+    const result = await generateCoupangDeeplink(productUrl, userLptag, adminApiKeys);
+    return { success: true, ...result };
+  } catch (err) {
+    console.error('[coupang-deeplink] 오류:', err.message);
+    return { success: false, error: err.message };
+  }
 });

@@ -1,7 +1,7 @@
 {
   "name": "shorts-remixer",
-  "version": "3.0.0",
-  "description": "쇼츠 리믹서 - 양방향 다국어 번역 + 쇼츠/롱폼 자동 생성",
+  "version": "3.0.2",
+  "description": "쇼츠 리믹서 - 자동 영상 다운로드 + 더빙/자막 자동 생성",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -9,12 +9,12 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win --x64",
     "build:portable": "electron-builder --win portable --x64",
-    "build:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-${version}.${ext}",
+    "build:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-3.0.2.exe",
     "build:trial": "cross-env BUILD_MODE=trial electron-builder --win --x64 -c.extraMetadata.buildMode=trial -c.productName=ShortsRemixer-Trial -c.artifactName=ShortsRemixer-Trial-Setup-${version}.${ext}",
     "publish": "electron-builder --win --x64 --publish always",
     "publish:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-${version}.${ext} --publish always"
   },
-  "author": "제일라",
+  "author": "Zheila",
   "license": "MIT",
   "devDependencies": {
     "cross-env": "^7.0.3",
@@ -37,6 +37,28 @@
       "node_modules/**/*",
       "package.json"
     ],
+   "extraResources": [
+  {
+    "from": "ffmpeg.exe",
+    "to": "ffmpeg.exe"
+  },
+  {
+    "from": "ffprobe.exe",
+    "to": "ffprobe.exe"
+  },
+  {
+    "from": "yt-dlp.exe",
+    "to": "yt-dlp.exe"
+  },
+  {
+    "from": "edge-tts.exe",
+    "to": "edge-tts.exe"
+  },
+  {
+    "from": "fonts",
+    "to": "fonts"
+  }
+],
     "publish": [
       {
         "provider": "github",
@@ -50,10 +72,12 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "publisherName": "제일라"
+      "publisherName": "Zheila"
     },
     "nsis": {
       "oneClick": false,
