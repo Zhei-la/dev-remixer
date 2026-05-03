@@ -3992,56 +3992,50 @@ async function composeFinalVideo({
   // [[word]] 파싱 함수 - 텍스트를 세그먼트들로 분할
   // 반환: [{text, highlight}, ...]
   function parseHighlightSegments(text) {
+    // 🔴 핵심: drawtext는 끝 공백 너비를 포함 안 시킴
+    // 해결책: [[ ]] 앞뒤의 공백을 강조 부분에 흡수시킴
+    // 예: "이거 [[놓다]] 벽" → ["이거", " 놓다 ", "벽"] (강조 부분이 양옆 공백 가짐)
+    
     const segments = [];
-    const regex = /\[\[(.+?)\]\]/g;
+    const regex = /(\s*)\[\[(.+?)\]\](\s*)/g;  // 앞뒤 공백도 캡처
     let lastIdx = 0;
     let match;
+    
     while ((match = regex.exec(text)) !== null) {
-      // match 앞쪽 일반 텍스트
-      if (match.index > lastIdx) {
-        segments.push({ text: text.substring(lastIdx, match.index), highlight: false });
+      const beforeSpace = match[1] || '';  // [[ 앞 공백 (있을 수도 없을 수도)
+      const highlightText = match[2].trim();  // 강조 텍스트 (양끝 공백 정리)
+      const afterSpace = match[3] || '';  // ]] 뒤 공백
+      
+      // 마커 매치 시작 위치 = match.index (공백 포함된 위치)
+      // 일반 부분은 lastIdx ~ match.index까지
+      const beforeStart = match.index;
+      
+      // 마커 앞 일반 텍스트 (공백 제외 - 공백은 강조에 흡수)
+      const plainBefore = text.substring(lastIdx, beforeStart);
+      if (plainBefore.length > 0) {
+        segments.push({ text: plainBefore, highlight: false });
       }
-      // 강조 텍스트 (앞뒤 공백 trim)
-      segments.push({ text: match[1].trim(), highlight: true });
+      
+      // 강조 텍스트: 앞뒤 공백 흡수
+      let hlText = highlightText;
+      if (beforeSpace.length > 0) hlText = ' ' + hlText;  // 앞 공백 1개
+      if (afterSpace.length > 0) hlText = hlText + ' ';   // 뒤 공백 1개
+      segments.push({ text: hlText, highlight: true });
+      
       lastIdx = regex.lastIndex;
     }
+    
     // 남은 일반 텍스트
     if (lastIdx < text.length) {
       segments.push({ text: text.substring(lastIdx), highlight: false });
     }
+    
     if (segments.length === 0) {
       segments.push({ text, highlight: false });
     }
-    // 🆕 빈 세그먼트 제거 + 연속 공백 단일 공백으로
-    let result = segments
-      .filter(s => s.text && s.text.length > 0)
-      .map(s => ({ ...s, text: s.text.replace(/\s+/g, ' ') }));
     
-    // 🔴 핵심 수정: 일반 부분 양끝 공백 trim
-    // 그리고 강조 부분 양옆에 자체 공백 포함시키기
-    // (drawtext는 끝 공백을 너비에 포함 안 시킴 → 빈 공간 생기는 원인)
-    result = result.map((s, i) => {
-      if (s.highlight) {
-        // 강조 부분: 양옆에 공백 포함 (앞뒤 부분이 일반이면)
-        const prev = i > 0 ? result[i - 1] : null;
-        const next = i < result.length - 1 ? result[i + 1] : null;
-        let t = s.text.trim();
-        // 앞에 일반 텍스트가 있으면 → 공백을 강조에 붙임 (앞공백)
-        if (prev && !prev.highlight && /\s$/.test(prev.text)) {
-          t = ' ' + t;
-        }
-        // 뒤에 일반 텍스트가 있으면 → 공백을 강조에 붙임 (뒷공백)
-        if (next && !next.highlight && /^\s/.test(next.text)) {
-          t = t + ' ';
-        }
-        return { ...s, text: t };
-      } else {
-        // 일반 부분: 양끝 공백 trim (강조 부분이 공백 갖고 있음)
-        return { ...s, text: s.text.trim() };
-      }
-    });
-    
-    return result.filter(s => s.text && s.text.length > 0);
+    // 빈 세그먼트 제거
+    return segments.filter(s => s.text && s.text.length > 0);
   }
 
   // 한 줄 텍스트를 여러 drawtext로 그리기 (단어별 색 지원)
@@ -4094,35 +4088,12 @@ async function composeFinalVideo({
   // xPercent: X 위치 (0~100%)
   // 반환: 마지막 레이블
   function drawMultiColorLine(parentLabel, lineText, y, fontSize, fontPath, highlightColor, outputPrefix, align = 'center', xPercent = 50) {
-    // 🔴 [[ ]] 제거한 plain 텍스트와 segments 모두 만들기
-    const plainText = lineText.replace(/\[\[(.+?)\]\]/g, '$1');
     const segs = parseHighlightSegments(lineText);
-    
-    // 전체 너비 = plain 텍스트 기준으로 계산 (가장 정확)
-    const totalWidth = estimateTextWidth(plainText, fontSize);
-    
-    // 🔴 각 segment의 X 위치를 plain 텍스트 안에서의 cumulative 길이로 계산
-    // 이렇게 하면 segment 사이 간격이 자연스러움 (drawtext가 끝 공백 무시하는 문제 해결)
-    let cumPlainText = '';
-    const segsWithX = [];
-    let plainIdx = 0;  // plain 텍스트 안에서의 현재 위치
-    
-    for (const seg of segs) {
-      if (!seg.text) continue;
-      // plain 텍스트에서 이 seg.text가 시작하는 위치
-      const segStart = plainText.indexOf(seg.text, plainIdx);
-      if (segStart === -1) {
-        // 못 찾으면 cumulative 방식으로 폴백
-        const xOffset = estimateTextWidth(cumPlainText, fontSize);
-        segsWithX.push({ ...seg, xOffset });
-        cumPlainText += seg.text;
-      } else {
-        // 정확한 위치 = plain의 0~segStart까지의 너비
-        const xOffset = estimateTextWidth(plainText.substring(0, segStart), fontSize);
-        segsWithX.push({ ...seg, xOffset });
-        plainIdx = segStart + seg.text.length;
-        cumPlainText = plainText.substring(0, plainIdx);
-      }
+
+    // 전체 너비 계산
+    let totalWidth = 0;
+    for (const s of segs) {
+      totalWidth += estimateTextWidth(s.text, fontSize);
     }
 
     // 시작 x = align과 xPercent 적용
@@ -4132,33 +4103,28 @@ async function composeFinalVideo({
     } else if (align === 'right') {
       startX = Math.floor(targetW * (xPercent / 100)) - totalWidth;
     } else {
-      // 중앙 정렬: xPercent% 기준 중앙
       startX = Math.floor(targetW * (xPercent / 100)) - Math.floor(totalWidth / 2);
     }
     
-    // 화면 밖으로 나가지 않게
     startX = Math.max(10, Math.min(startX, targetW - totalWidth - 10));
 
+    let currentX = startX;
     let currentLabel = parentLabel;
     let counter = 0;
 
-    // 🔴 각 segment를 절대 위치(startX + xOffset)에 그림
-    for (const seg of segsWithX) {
+    for (const seg of segs) {
       if (!seg.text || seg.text.length === 0) continue;
-      // 강조 부분 trim된 상태이므로 원래 양옆 공백 위치 정확히 유지
-      const segText = seg.highlight ? seg.text.trim() : seg.text;
-      if (!segText) continue;
-      
-      const escText = escapeDrawtext(segText);
+      const escText = escapeDrawtext(seg.text);
       const color = seg.highlight ? toFFColor(highlightColor) : 'white';
-      const x = Math.floor(startX + seg.xOffset);
+      const segWidth = estimateTextWidth(seg.text, fontSize);
       const newLabel = `${outputPrefix}_${counter}`;
       counter++;
 
       filters.push(
-        `[${currentLabel}]drawtext=fontfile='${fontPath}':text='${escText}':fontcolor=${color}:fontsize=${fontSize}:bordercolor=black:borderw=4:x=${x}:y=${y}[${newLabel}]`
+        `[${currentLabel}]drawtext=fontfile='${fontPath}':text='${escText}':fontcolor=${color}:fontsize=${fontSize}:bordercolor=black:borderw=4:x=${Math.floor(currentX)}:y=${y}[${newLabel}]`
       );
 
+      currentX += segWidth;
       currentLabel = newLabel;
     }
 
@@ -4428,38 +4394,13 @@ async function composeFinalVideo({
       // ===== 🔴 [[ ]] 부분 강조 모드 (단어별) =====
       // 줄바꿈 무시하고 한 줄로 그림 (위치 계산이 복잡해서)
       if (segHasMarker) {
-        // 🔴 plain 텍스트 (마커 제거) 기준으로 정확한 너비 계산
-        // 이렇게 하면 강조/일반 사이 간격이 자연스러움 (drawtext 끝 공백 무시 문제 해결)
-        const plainText = cleanText.replace(/\[\[(.+?)\]\]/g, '$1');
-        
         // [[ ]] 마커로 분할
         const segParts = parseHighlightSegments(cleanText);
         
-        // 🔴 전체 너비 = plain 텍스트 기준 (가장 정확)
-        const totalLineWidth = estimateTextWidth(plainText, style.fontSize);
-        
-        // 🔴 각 segment의 X 위치를 plain 텍스트에서의 절대 위치로 계산
-        let plainSearchStart = 0;
-        const segPartsWithX = [];
+        // 전체 너비 추정 (가로 중앙 정렬)
+        let totalLineWidth = 0;
         for (const sp of segParts) {
-          if (!sp.text) continue;
-          const segText = sp.highlight ? sp.text.trim() : sp.text;
-          if (!segText) continue;
-          
-          // plain 텍스트에서 이 부분이 시작하는 인덱스 찾기
-          const segStart = plainText.indexOf(segText, plainSearchStart);
-          let xOffset;
-          if (segStart === -1) {
-            // 못 찾으면 누적 방식 폴백
-            xOffset = segPartsWithX.length > 0 
-              ? segPartsWithX[segPartsWithX.length - 1].xOffset + estimateTextWidth(segPartsWithX[segPartsWithX.length - 1].text, style.fontSize)
-              : 0;
-          } else {
-            // 정확한 위치 = plain 텍스트의 0~segStart까지의 너비
-            xOffset = estimateTextWidth(plainText.substring(0, segStart), style.fontSize);
-            plainSearchStart = segStart + segText.length;
-          }
-          segPartsWithX.push({ ...sp, text: segText, xOffset });
+          totalLineWidth += estimateTextWidth(sp.text, style.fontSize);
         }
         
         // 시작 X = 화면 중앙 - 전체너비/2 (ffmpeg 표현식)
@@ -4493,13 +4434,15 @@ async function composeFinalVideo({
         }
         
         let currentLabel = lastLabel;
+        let currentXOffset = 0;
         
-        segPartsWithX.forEach((sp, spIdx) => {
+        segParts.forEach((sp, spIdx) => {
           if (!sp.text || sp.text.length === 0) return;
           
           const partLabel = `sub${idx}_p${spIdx}`;
           const partColor = sp.highlight ? highlightColor : baseColor;
           const partBorderColor = sp.highlight ? toFFColor('#000000') : style.borderColor;
+          const partWidth = estimateTextWidth(sp.text, style.fontSize);
           
           // 각 부분을 별도 파일로 저장
           const partFilePath = path.join(jobDir, `sub_${idx}_p${spIdx}.txt`);
@@ -4507,8 +4450,8 @@ async function composeFinalVideo({
           subFilePaths.push(partFilePath);
           const escapedPartPath = partFilePath.replace(/\\/g, '/').replace(/:/g, '\\:');
           
-          // 🔴 x 좌표 = 시작X + plain 텍스트 기준 절대 오프셋
-          const partXExpr = `(${startXExpr})+${Math.floor(sp.xOffset)}`;
+          // x 좌표 = 시작X + 누적오프셋
+          const partXExpr = `(${startXExpr})+${currentXOffset}`;
           
           const partOpts = [
             `fontfile='${fontPath}'`,
@@ -4537,6 +4480,7 @@ async function composeFinalVideo({
           
           filters.push(`[${currentLabel}]drawtext=${partOpts.join(':')}[${partLabel}]`);
           currentLabel = partLabel;
+          currentXOffset += partWidth;
         });
         
         lastLabel = currentLabel;
