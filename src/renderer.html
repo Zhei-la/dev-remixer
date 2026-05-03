@@ -1346,7 +1346,7 @@
     <div class="step-nav-footer">
       <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
         <a href="#" id="settingsLink" style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg-2); border-radius:8px; text-decoration:none; font-size:11px; font-weight:600;">⚙️ 설정</a>
-        <a href="#" id="helpLink" style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg-2); border-radius:8px; text-decoration:none; font-size:11px; font-weight:600;">❓ 도움말</a>
+        <a href="#" id="helpLink" style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg-2); border-radius:8px; text-decoration:none; font-size:11px; font-weight:600;">❓ 도움말/요금제</a>
         <a href="#" id="guideLink" style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg-2); border-radius:8px; text-decoration:none; font-size:11px; font-weight:600;">📖 사용방법</a>
       </div>
       <div style="font-size:9px; color:var(--text-dim);">made for 제일라 · v3.0</div>
@@ -2177,9 +2177,29 @@
             <textarea class="input" id="generatedScriptEditStep4" placeholder="🎬 영상 URL 입력 후 '대본 생성' 버튼을 눌러주세요!
 
 예시:
-이거 진짜 대박인데 안 사면 후회함!
-근데 가격이 얼마게? 만원도 안 해!
-한 줄 = 한 자막으로 나옵니다" style="min-height:180px; resize:vertical; font-size:13px; line-height:1.8; margin-top:8px;"></textarea>
+이거 진짜 [[대박]]인데 안 사면 후회함!
+가격이 [[만원도 안 해]]
+지금 [[한정 세일]] 중이니까 빨리!
+
+💡 [[ ]]로 감싼 부분만 강조색으로 표시됩니다" style="min-height:180px; resize:vertical; font-size:13px; line-height:1.8; margin-top:8px;"></textarea>
+            
+            <!-- 🆕 [[ ]] 강조 안내 문구 -->
+            <div style="margin-top:8px; padding:10px 12px; background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.3); border-radius:8px; font-size:12px; line-height:1.7;">
+              <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">✨ 강조 색상 사용법</div>
+              <div style="color:var(--text);">
+                강조하고 싶은 단어를 <code style="background:rgba(249,115,22,0.15); padding:1px 6px; border-radius:4px; font-weight:700; color:var(--accent);">[[단어]]</code>로 감싸면<br>
+                그 부분만 <b style="color:var(--accent);">자막 디자인에서 선택한 강조 색상</b>으로 표시됩니다!
+              </div>
+              <div style="margin-top:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; font-size:11px; color:var(--text-dim); line-height:1.6;">
+                <b style="color:var(--text);">예시:</b><br>
+                이건 얇아서 <code style="background:rgba(249,115,22,0.2); padding:1px 5px; border-radius:3px; color:var(--accent);">[[폰에 딱 붙어]]</code> 걸리적거리지 않아<br>
+                <span style="color:var(--accent);">→ "폰에 딱 붙어" 부분만 강조색!</span>
+              </div>
+              <div style="margin-top:6px; color:var(--text-dim); font-size:11px;">
+                💡 강조색은 다음 단계 <b>"자막 디자인"</b>에서 변경 가능
+              </div>
+            </div>
+            
             <!-- 🆕 줄수 표시 - 대본 생성 버튼 위, 왼쪽 정렬 -->
             <div id="scriptLineCountStep4" style="margin-top:8px; padding:6px 12px; background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.2); border-radius:6px; font-size:12px; color:var(--text); text-align:left; display:none;">
               📝 현재 대본 <b><span id="scriptLineCountValStep4" style="color:var(--accent); font-weight:800;">0</span>줄</b>
@@ -2804,19 +2824,6 @@
             <div id="savedFontSizeStatus" style="margin-top:6px; font-size:11px; color:#6366f1; display:none;"></div>
             <div class="hint" style="margin-top:6px;">💡 크기와 글씨체를 저장하면 다음 작업에도 자동 적용됩니다</div>
           </div>
-
-          <div class="form-row" style="margin-top:14px;">
-            <label>애니메이션</label>
-            <select class="input" id="animationSelect">
-              <option value="">프리셋 따름</option>
-              <option value="none">없음</option>
-              <option value="fade">페이드 인/아웃</option>
-              <option value="pop">팝업</option>
-              <option value="slide_up">슬라이드 업</option>
-              <option value="bounce">바운스</option>
-              <option value="typewriter">타이프라이터</option>
-            </select>
-          </div>
         </div>
 
         <div class="card">
@@ -2933,14 +2940,6 @@
               </div>
               
               <div id="blurMaskOptions" style="display:none; margin-top:10px;">
-                <!-- 🆕 자동 감지 버튼 -->
-                <div style="display:flex; gap:6px; margin-bottom:10px;">
-                  <button class="btn btn-primary" id="autoDetectBlurBtn" style="flex:1; font-size:11px; padding:8px;">
-                    🎯 원본 자막 위치 자동 감지
-                  </button>
-                </div>
-                <div id="autoDetectBlurStatus" style="display:none; margin-bottom:10px; padding:8px; border-radius:6px; font-size:10px;"></div>
-                
                 <div class="form-row" style="margin-bottom:8px;">
                   <label style="font-size:10px;">블러 위치 (<span id="blurPosValue">5%</span>) - 미리보기에서 드래그 가능</label>
                   <input type="range" id="blurPosSlider" min="0" max="95" value="5" style="width:100%;" />
@@ -3515,8 +3514,8 @@
       <!-- ===== 도움말 페이지 (숨김) ===== -->
       <div class="wizard-step" data-step="help" style="display:none;">
         <div class="step-header">
-          <h1>❓ 사용법</h1>
-          <p>쇼츠 리믹서 사용 가이드</p>
+          <h1>❓ 도움말/요금제</h1>
+          <p>쇼츠 리믹서 사용 가이드 및 요금제 안내</p>
         </div>
 
         <div class="card">
@@ -3529,6 +3528,103 @@
             5️⃣ <b>최종 확인</b>: 설정 확인 후 작업 시작!<br>
             <br>
             📁 결과물: <b>내 비디오 폴더 → ShortsRemixer</b>
+          </div>
+        </div>
+
+        <!-- 🆕 요금제 안내 -->
+        <div class="card" style="background:linear-gradient(135deg, rgba(249,115,22,0.05), rgba(249,115,22,0.02)); border:1px solid rgba(249,115,22,0.25);">
+          <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+            <span>💎 요금제 안내</span>
+            <a href="https://zhei-la.github.io/shorts-remixer-landing/" target="_blank" style="font-size:11px; color:var(--accent); text-decoration:none; font-weight:600;">자세히 보기 →</a>
+          </div>
+          
+          <!-- 5월 얼리버드 배지 -->
+          <div style="display:inline-block; padding:4px 10px; background:linear-gradient(135deg, #F97316, #EA580C); color:white; border-radius:20px; font-size:10px; font-weight:700; margin-bottom:14px; letter-spacing:0.5px;">
+            🔥 5월 얼리버드 특가 진행 중
+          </div>
+          
+          <!-- 4가지 플랜 카드 그리드 -->
+          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:14px;">
+            
+            <!-- 체험 (무료) -->
+            <div style="padding:14px; background:var(--bg-2); border:1px solid var(--line); border-radius:10px;">
+              <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-bottom:4px;">🎁 체험</div>
+              <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:8px;">무료</div>
+              <div style="font-size:11px; color:var(--text-dim); line-height:1.6;">
+                ✓ 총 10회 영상 생성<br>
+                ✓ 모든 핵심 기능 사용
+              </div>
+            </div>
+            
+            <!-- 베이직 -->
+            <div style="padding:14px; background:var(--bg-2); border:1px solid var(--line); border-radius:10px;">
+              <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-bottom:4px;">⭐ 베이직</div>
+              <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:8px;">14,900원<span style="font-size:10px; color:var(--text-dim); font-weight:500;"> /월</span></div>
+              <div style="font-size:11px; color:var(--text-dim); line-height:1.6;">
+                ✓ 월 20개 영상 생성<br>
+                ✓ 3개월 결제 시 15% 할인
+              </div>
+            </div>
+            
+            <!-- 프로 -->
+            <div style="padding:14px; background:var(--bg-2); border:1px solid var(--line); border-radius:10px;">
+              <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-bottom:4px;">💎 프로</div>
+              <div style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:8px;">29,900원<span style="font-size:10px; color:var(--text-dim); font-weight:500;"> /월</span></div>
+              <div style="font-size:11px; color:var(--text-dim); line-height:1.6;">
+                ✓ 월 50개 영상 생성<br>
+                ✓ 첫 구매 3개월 30% 할인
+              </div>
+            </div>
+            
+            <!-- 얼리버드 평생 (강조) -->
+            <div style="padding:14px; background:linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.05)); border:2px solid var(--accent); border-radius:10px; position:relative;">
+              <div style="position:absolute; top:-8px; right:8px; padding:2px 8px; background:var(--accent); color:white; border-radius:10px; font-size:9px; font-weight:700;">🔥 BEST</div>
+              <div style="font-size:11px; color:var(--accent); font-weight:700; margin-bottom:4px;">🚀 얼리버드 평생</div>
+              <div style="font-size:18px; font-weight:800; color:var(--accent); margin-bottom:8px;">
+                <span style="text-decoration:line-through; color:var(--text-dim); font-size:11px; font-weight:500;">500,000원</span> 350,000원
+              </div>
+              <div style="font-size:11px; color:var(--text); line-height:1.6;">
+                ✓ <b>일일 무제한</b> 영상 제작<br>
+                ✓ 평생 업데이트 무료
+              </div>
+            </div>
+            
+          </div>
+          
+          <!-- 얼리버드 보너스 안내 -->
+          <div style="padding:12px; background:rgba(249,115,22,0.08); border-radius:8px; font-size:11px; line-height:1.7; color:var(--text);">
+            <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">🎁 얼리버드 평생 가입 시 추가 증정 (총 110만원+ 가치)</div>
+            <div style="color:var(--text-dim);">
+              ✓ 애니메이션 툴 (15만원 상당)<br>
+              ✓ 3D 픽사 영상 툴 (15만원 상당)<br>
+              ✓ AI 영화 제작 툴 (15만원 상당)<br>
+              ✓ 썰 이미지&대본 생성기<br>
+              ✓ 얼리버드 단톡방 초대<br>
+              ✓ 신규 툴 평생 무료 제공
+            </div>
+          </div>
+          
+          <!-- 1년 본전 강조 -->
+          <div style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border-left:3px solid var(--accent); border-radius:4px; font-size:11px; line-height:1.6;">
+            💡 <b style="color:var(--accent);">1년만 써도 본전!</b> 프로 플랜 1년치(358,800원)보다 저렴합니다.<br>
+            <span style="color:var(--text-dim);">⚠️ 5월 31일 이후 정가 인상 예정</span>
+          </div>
+          
+          <!-- 구매 문의 버튼 -->
+          <div style="margin-top:12px; text-align:center;">
+            <a href="https://open.kakao.com/me/Zheila" target="_blank" style="
+              display:inline-flex;
+              align-items:center;
+              gap:8px;
+              background:linear-gradient(135deg, #F97316, #EA580C);
+              color:white;
+              padding:10px 20px;
+              border-radius:10px;
+              text-decoration:none;
+              font-weight:700;
+              font-size:13px;
+              box-shadow:0 4px 12px rgba(249,115,22,0.3);
+            ">💎 평생 사용권 구매 문의 →</a>
           </div>
         </div>
 
@@ -4299,24 +4395,62 @@
   // 🆕 통합 미리듣기 시스템 (Edge / Typecast / ElevenLabs)
   const ttsPreviewCache = {};  // key: provider:voiceId → Blob URL
   let currentPreviewAudio = null;
+  let currentPreviewBtn = null;       // 🆕 현재 재생 중인 버튼 추적
+  let currentPreviewOriginalText = null; // 🆕 원래 텍스트 저장
   
   function stopCurrentPreview() {
     if (currentPreviewAudio) {
-      try { currentPreviewAudio.pause(); } catch(e) {}
+      try { 
+        currentPreviewAudio.pause(); 
+        currentPreviewAudio.currentTime = 0;
+      } catch(e) {}
       currentPreviewAudio = null;
+    }
+    // 🆕 버튼 텍스트 복구
+    if (currentPreviewBtn && currentPreviewOriginalText !== null) {
+      try {
+        currentPreviewBtn.textContent = currentPreviewOriginalText;
+        currentPreviewBtn.disabled = false;
+      } catch(e) {}
+      currentPreviewBtn = null;
+      currentPreviewOriginalText = null;
     }
   }
   
   function playCachedAudio(cacheKey, btnEl, originalText) {
     if (!ttsPreviewCache[cacheKey]) return false;
+    
+    // 🆕 같은 버튼에서 이미 재생 중이면 → 정지 토글
+    if (currentPreviewBtn === btnEl && currentPreviewAudio) {
+      stopCurrentPreview();
+      return true;
+    }
+    
+    // 다른 버튼 누르거나 처음 누름 → 기존 정지 후 새로 재생
     stopCurrentPreview();
     const audio = new Audio(ttsPreviewCache[cacheKey]);
     currentPreviewAudio = audio;
+    currentPreviewBtn = btnEl;
+    currentPreviewOriginalText = originalText;
     btnEl.textContent = '⏸';
     btnEl.disabled = false;
     audio.play();
-    audio.onended = () => { btnEl.textContent = originalText; };
-    audio.onerror = () => { btnEl.textContent = originalText; };
+    audio.onended = () => { 
+      btnEl.textContent = originalText;
+      if (currentPreviewBtn === btnEl) {
+        currentPreviewAudio = null;
+        currentPreviewBtn = null;
+        currentPreviewOriginalText = null;
+      }
+    };
+    audio.onerror = () => { 
+      btnEl.textContent = originalText;
+      if (currentPreviewBtn === btnEl) {
+        currentPreviewAudio = null;
+        currentPreviewBtn = null;
+        currentPreviewOriginalText = null;
+      }
+    };
     return true;
   }
   
@@ -4336,6 +4470,12 @@
     }
     const originalText = btnEl.textContent;
     const cacheKey = `typecast:${voiceId}`;
+    
+    // 🆕 같은 버튼에서 재생 중이면 → 정지 토글
+    if (currentPreviewBtn === btnEl && currentPreviewAudio) {
+      stopCurrentPreview();
+      return;
+    }
     
     if (playCachedAudio(cacheKey, btnEl, originalText)) return;
     
@@ -4365,11 +4505,27 @@
       
       const audio = new Audio(url);
       currentPreviewAudio = audio;
+      currentPreviewBtn = btnEl;
+      currentPreviewOriginalText = originalText;
       btnEl.textContent = '⏸';
       btnEl.disabled = false;
       audio.play();
-      audio.onended = () => { btnEl.textContent = originalText; };
-      audio.onerror = () => { btnEl.textContent = originalText; };
+      audio.onended = () => { 
+        btnEl.textContent = originalText;
+        if (currentPreviewBtn === btnEl) {
+          currentPreviewAudio = null;
+          currentPreviewBtn = null;
+          currentPreviewOriginalText = null;
+        }
+      };
+      audio.onerror = () => { 
+        btnEl.textContent = originalText;
+        if (currentPreviewBtn === btnEl) {
+          currentPreviewAudio = null;
+          currentPreviewBtn = null;
+          currentPreviewOriginalText = null;
+        }
+      };
     } catch (err) {
       console.error('[미리듣기/타입캐스트] 오류:', err);
       btnEl.textContent = originalText;
@@ -4386,6 +4542,12 @@
     }
     const originalText = btnEl.textContent;
     const cacheKey = `elevenlabs:${voiceId}`;
+    
+    // 🆕 같은 버튼에서 재생 중이면 → 정지 토글
+    if (currentPreviewBtn === btnEl && currentPreviewAudio) {
+      stopCurrentPreview();
+      return;
+    }
     
     if (playCachedAudio(cacheKey, btnEl, originalText)) return;
     
@@ -4415,11 +4577,27 @@
       
       const audio = new Audio(url);
       currentPreviewAudio = audio;
+      currentPreviewBtn = btnEl;
+      currentPreviewOriginalText = originalText;
       btnEl.textContent = '⏸';
       btnEl.disabled = false;
       audio.play();
-      audio.onended = () => { btnEl.textContent = originalText; };
-      audio.onerror = () => { btnEl.textContent = originalText; };
+      audio.onended = () => { 
+        btnEl.textContent = originalText;
+        if (currentPreviewBtn === btnEl) {
+          currentPreviewAudio = null;
+          currentPreviewBtn = null;
+          currentPreviewOriginalText = null;
+        }
+      };
+      audio.onerror = () => { 
+        btnEl.textContent = originalText;
+        if (currentPreviewBtn === btnEl) {
+          currentPreviewAudio = null;
+          currentPreviewBtn = null;
+          currentPreviewOriginalText = null;
+        }
+      };
     } catch (err) {
       console.error('[미리듣기/ElevenLabs] 오류:', err);
       btnEl.textContent = originalText;
@@ -4452,6 +4630,12 @@
     const originalText = btnEl.textContent;
     const cacheKey = `edge:${voiceId}`;
     
+    // 🆕 같은 버튼에서 재생 중이면 → 정지 토글
+    if (currentPreviewBtn === btnEl && currentPreviewAudio) {
+      stopCurrentPreview();
+      return;
+    }
+    
     if (playCachedAudio(cacheKey, btnEl, originalText)) return;
     
     stopCurrentPreview();
@@ -4473,11 +4657,27 @@
       
       const audio = new Audio(url);
       currentPreviewAudio = audio;
+      currentPreviewBtn = btnEl;
+      currentPreviewOriginalText = originalText;
       btnEl.textContent = '⏸';
       btnEl.disabled = false;
       audio.play();
-      audio.onended = () => { btnEl.textContent = originalText; };
-      audio.onerror = () => { btnEl.textContent = originalText; };
+      audio.onended = () => { 
+        btnEl.textContent = originalText;
+        if (currentPreviewBtn === btnEl) {
+          currentPreviewAudio = null;
+          currentPreviewBtn = null;
+          currentPreviewOriginalText = null;
+        }
+      };
+      audio.onerror = () => { 
+        btnEl.textContent = originalText;
+        if (currentPreviewBtn === btnEl) {
+          currentPreviewAudio = null;
+          currentPreviewBtn = null;
+          currentPreviewOriginalText = null;
+        }
+      };
     } catch (err) {
       console.error('[미리듣기/Edge] 오류:', err);
       btnEl.textContent = originalText;
@@ -4488,6 +4688,19 @@
   
   // 🆕 더빙 옵션 미리듣기 버튼 핸들러
   document.addEventListener('DOMContentLoaded', () => {
+    // 🔴 전역: 모든 input/textarea 클릭/포커스 시 즉시 활성화 (잠김 방지)
+    const unlockInput = (e) => {
+      const el = e.target;
+      if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT')) return;
+      if (el.disabled) el.disabled = false;
+      if (el.readOnly) el.readOnly = false;
+      el.style.pointerEvents = 'auto';
+      el.style.userSelect = 'text';
+    };
+    document.addEventListener('mousedown', unlockInput, true);
+    document.addEventListener('focus', unlockInput, true);
+    document.addEventListener('click', unlockInput, true);
+    
     // Edge TTS 미리듣기
     const previewEdgeBtn = document.getElementById('previewEdgeVoiceBtn');
     if (previewEdgeBtn) {
@@ -5394,11 +5607,23 @@
     lineCountVal.textContent = lines;
     lineCountBox.style.display = 'block';
   }
+  // 🆕 글로벌로 노출 (다른 곳에서 .value 변경 후 호출 가능)
+  window.updateScriptLineCountStep4 = updateScriptLineCountStep4;
+  
   if (generatedScriptEditStep4) {
+    // input 이벤트로 실시간 감지 (사용자가 직접 타이핑할 때)
     generatedScriptEditStep4.addEventListener('input', updateScriptLineCountStep4);
-    // 대본 생성 후 자동 업데이트도
-    const observer = new MutationObserver(updateScriptLineCountStep4);
-    observer.observe(generatedScriptEditStep4, { attributes: true, attributeFilter: ['value'] });
+    // change 이벤트도 추가 (붙여넣기 등)
+    generatedScriptEditStep4.addEventListener('change', updateScriptLineCountStep4);
+    // 🆕 폴링으로 .value = ... 도 감지 (가로채기보다 안전)
+    let lastScriptValue = '';
+    setInterval(() => {
+      const cur = generatedScriptEditStep4.value || '';
+      if (cur !== lastScriptValue) {
+        lastScriptValue = cur;
+        updateScriptLineCountStep4();
+      }
+    }, 300); // 300ms마다 체크
   }
   
   // 스텝 4 타입캐스트 TTS 파일 선택
@@ -5476,10 +5701,6 @@
     cafe24_ssurround: '✨ 카페24 써라운드',
     cafe24_supermagic: '✨ 카페24 슈퍼매직 Bold',
     cafe24_supermagic_rg: '✨ 카페24 슈퍼매직',
-    cafe24_angbanana: '✨ 카페24 앙바나나',
-    cafe24_behappy: '✨ 카페24 비해피',
-    cafe24_decobox: '✨ 카페24 데코박스',
-    cafe24_proslimfit: '✨ 카페24 프로슬림핏',
   };
   const fontFamilySel = document.getElementById('fontFamily');
   Object.entries(FONTS).forEach(([k, v]) => {
@@ -5651,10 +5872,6 @@
       cafe24_ssurround: '"Cafe24 Ssurround", sans-serif',
       cafe24_supermagic: '"Cafe24 Supermagic", sans-serif',
       cafe24_supermagic_rg: '"Cafe24 Supermagic Regular", sans-serif',
-      cafe24_angbanana: '"Cafe24 Angbanana", sans-serif',
-      cafe24_behappy: '"Cafe24 Behappy", sans-serif',
-      cafe24_decobox: '"Cafe24 Decobox", sans-serif',
-      cafe24_proslimfit: '"Cafe24 PROSlimFit", sans-serif',
     };
     previewSubtitle.style.fontFamily = FONT_CSS_MAP[fontKey] || 'inherit';
     
@@ -6995,123 +7212,7 @@
     });
   }
   
-  // 🆕 ===== 블러 자동 감지 =====
-  const autoDetectBlurBtn = document.getElementById('autoDetectBlurBtn');
-  const autoDetectBlurStatus = document.getElementById('autoDetectBlurStatus');
-  
-  function showDetectStatus(message, type = 'info') {
-    if (!autoDetectBlurStatus) return;
-    autoDetectBlurStatus.style.display = 'block';
-    autoDetectBlurStatus.textContent = message;
-    if (type === 'success') {
-      autoDetectBlurStatus.style.background = 'rgba(76,175,80,0.15)';
-      autoDetectBlurStatus.style.border = '1px solid rgba(76,175,80,0.4)';
-      autoDetectBlurStatus.style.color = '#4caf50';
-    } else if (type === 'error') {
-      autoDetectBlurStatus.style.background = 'rgba(239,68,68,0.15)';
-      autoDetectBlurStatus.style.border = '1px solid rgba(239,68,68,0.4)';
-      autoDetectBlurStatus.style.color = '#ef4444';
-    } else {
-      autoDetectBlurStatus.style.background = 'rgba(249,115,22,0.08)';
-      autoDetectBlurStatus.style.border = '1px solid rgba(249,115,22,0.2)';
-      autoDetectBlurStatus.style.color = 'var(--accent)';
-    }
-  }
-  
-  // 진행 상황 수신
-  if (window.api.onDetectSubtitleProgress) {
-    window.api.onDetectSubtitleProgress((data) => {
-      if (data.message) showDetectStatus(data.message, 'info');
-    });
-  }
-  
-  if (autoDetectBlurBtn) {
-    autoDetectBlurBtn.addEventListener('click', async () => {
-      // 영상 소스 결정 (URL 또는 업로드 파일)
-      let videoInput = '';
-      const urlInput = document.getElementById('urlInput');
-      const url = urlInput?.value?.trim() || '';
-      
-      // 업로드된 파일 우선
-      if (typeof uploadedFiles !== 'undefined' && uploadedFiles.length > 0) {
-        const firstVideo = uploadedFiles.find(f => f.type === 'video' || (f.name && /\.(mp4|mov|avi|mkv|webm)$/i.test(f.name)));
-        if (firstVideo && firstVideo.path) {
-          videoInput = firstVideo.path;
-        }
-      }
-      
-      // 업로드 없으면 URL 사용
-      if (!videoInput && url) {
-        videoInput = url;
-      }
-      
-      if (!videoInput) {
-        alert('영상 URL을 입력하거나 파일을 업로드해주세요!');
-        return;
-      }
-      
-      autoDetectBlurBtn.disabled = true;
-      autoDetectBlurBtn.textContent = '⏳ 감지 중...';
-      showDetectStatus('🔍 영상 분석 시작...', 'info');
-      
-      try {
-        const result = await window.api.detectSubtitleArea(videoInput);
-        
-        if (result.success && result.detection) {
-          const { pos, height, strength, confidence, framesAnalyzed } = result.detection;
-          
-          // 슬라이더에 값 적용
-          blurMaskSettings.pos = pos;
-          blurMaskSettings.height = height;
-          // strength는 기존 유지 (사용자 선호값)
-          
-          if (blurPosSlider) {
-            blurPosSlider.value = pos;
-            if (blurPosValue) blurPosValue.textContent = pos + '%';
-          }
-          if (blurHeightSlider) {
-            blurHeightSlider.value = height;
-            if (blurHeightValue) blurHeightValue.textContent = height + 'px';
-          }
-          
-          updateBlurPreview();
-          
-          // 블러 토글이 꺼져있으면 자동으로 켜기
-          if (!useBlurMask && blurMaskToggle) {
-            blurMaskToggle.click();
-          }
-          
-          const confidencePercent = Math.round(confidence * 100);
-          let confIcon = '🎯';
-          let confMsg = '';
-          if (confidencePercent >= 70) {
-            confIcon = '✅';
-            confMsg = '매우 확실';
-          } else if (confidencePercent >= 40) {
-            confIcon = '👍';
-            confMsg = '꽤 정확';
-          } else {
-            confIcon = '⚠️';
-            confMsg = '불확실 - 수동 조정 필요';
-          }
-          
-          showDetectStatus(
-            `${confIcon} 감지 완료! 위치 ${pos}%, 높이 ${height}px (${framesAnalyzed}장 분석, 신뢰도 ${confidencePercent}% - ${confMsg})`, 
-            confidencePercent >= 40 ? 'success' : 'info'
-          );
-          log(`🎯 블러 자동 감지: 위치 ${pos}%, 높이 ${height}px (신뢰도 ${confidencePercent}%)`, 'ok');
-        } else {
-          showDetectStatus(`❌ ${result.error || '감지 실패'}`, 'error');
-        }
-      } catch (err) {
-        console.error('블러 자동 감지 오류:', err);
-        showDetectStatus(`❌ 오류: ${err.message}`, 'error');
-      } finally {
-        autoDetectBlurBtn.disabled = false;
-        autoDetectBlurBtn.textContent = '🎯 원본 자막 위치 자동 감지';
-      }
-    });
-  }
+  // 🆕 ===== 블러 자동 감지 ===== (UI 제거됨)
   
   // ===== 자막 드래그로 위치 이동 =====
   if (previewSubtitle) {
@@ -7744,13 +7845,16 @@
     // 범위 체크
     if (step < 1 || step > totalSteps) return;
     // 같은 step이면 무시 (중복 호출 방지)
+    // 단, 설정/도움말 페이지에서 돌아올 때는 다시 활성화 필요
     if (step === currentStep && currentStep !== 1) {
-      // 1번째는 초기 진입 시 호출되므로 예외
-      const isInitial = !document.querySelector('.wizard-step.active');
-      if (!isInitial) {
-        console.log(`[STEP] 같은 step(${step}) 호출 무시`);
+      // 🆕 wizard-step이 안 보이면 (설정/도움말이 표시 중) → 강제로 다시 표시
+      const targetPage = document.querySelector(`.wizard-step[data-step="${step}"]`);
+      const isHidden = !targetPage || targetPage.style.display === 'none' || !targetPage.classList.contains('active');
+      if (!isHidden) {
+        console.log(`[STEP] 같은 step(${step}) 호출 무시 (이미 활성화됨)`);
         return;
       }
+      console.log(`[STEP] 같은 step(${step})이지만 숨김 상태 → 다시 활성화`);
     }
 
     // 썰툰이면 2단계(파일입력) 건너뛰기
@@ -7781,6 +7885,31 @@
       targetPage.style.display = 'block';
       targetPage.classList.add('active');
     }
+    
+    // 🆕 URL 입력란 항상 활성화 (어떤 단계에서 돌아와도 입력 가능하도록)
+    const urlInputEl = document.getElementById('urlInput');
+    if (urlInputEl) {
+      urlInputEl.disabled = false;
+      urlInputEl.readOnly = false;
+      urlInputEl.style.pointerEvents = 'auto';
+      urlInputEl.style.userSelect = 'text';
+    }
+    
+    // 🆕 모든 textarea/input 활성화 + 로딩 오버레이 강제 숨김 (잠김 버그 방지)
+    document.querySelectorAll('textarea, input').forEach(el => {
+      if (el.disabled || el.readOnly) {
+        el.disabled = false;
+        el.readOnly = false;
+      }
+      el.style.pointerEvents = 'auto';
+      el.style.userSelect = 'text';
+    });
+    // 대본 로딩 오버레이가 떠있으면 강제로 숨김 (이전 실패로 남아있는 경우)
+    const scriptOverlays = document.querySelectorAll('#scriptLoadingOverlayStep4, #talkingScriptLoading, #scriptLoadingOverlay');
+    scriptOverlays.forEach(o => { if (o) o.style.display = 'none'; });
+    // 대본 textarea 강제로 보이게
+    const scriptTextareas = document.querySelectorAll('#generatedScriptEditStep4, #generatedScriptEdit, #talkingScriptEdit');
+    scriptTextareas.forEach(t => { if (t) t.style.display = 'block'; });
 
     // 좌측 네비게이션 업데이트
     document.querySelectorAll('.step-item').forEach(item => {
@@ -8028,6 +8157,7 @@
   document.querySelectorAll('.prog-dot').forEach(dot => {
     dot.addEventListener('click', () => {
       const step = parseInt(dot.dataset.step);
+      // 🆕 현재 단계 이하면 모두 클릭 가능 (active 포함)
       if (step <= currentStep) goToStep(step);
     });
   });
@@ -8036,7 +8166,10 @@
   document.querySelectorAll('.step-item').forEach(item => {
     item.addEventListener('click', () => {
       const step = parseInt(item.dataset.step);
-      if (step <= currentStep || item.classList.contains('completed')) {
+      // 🆕 active(주황색) / completed(초록색) 단계 모두 클릭 가능
+      // - active: 현재 작업 중인 단계 (설정/도움말에서 돌아올 때)
+      // - completed: 이미 완료한 단계 (이전 단계로 돌아갈 때)
+      if (item.classList.contains('active') || item.classList.contains('completed') || step <= currentStep) {
         goToStep(step);
       }
     });
@@ -8499,29 +8632,29 @@
       }
     }
     
-    // 취소 버튼 핸들러
+    // 취소 버튼 핸들러 - 즉시 취소 (UI 먼저 업데이트)
     document.querySelectorAll('.job-cancel-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const jobId = btn.dataset.jobId;
         if (!jobId) return;
+        
+        // 🆕 즉시 UI 업데이트 (await 안 기다림)
         btn.disabled = true;
-        btn.textContent = '⏳ 취소 중...';
-        try {
-          await window.api.cancelVideo(jobId);
-          const job = window.__jobs?.find?.(j => j.id === jobId);
-          if (job) {
-            job.status = 'cancelled';
-            job.message = '사용자가 작업을 취소함';
-            job.completedAt = Date.now();
-          }
-          renderJobs();
-          if (typeof renderJobHistory === 'function') renderJobHistory();
-        } catch (err) {
-          console.warn('cancelVideo 실패:', err);
-          btn.disabled = false;
-          btn.textContent = '⛔ 이 작업 취소';
+        btn.textContent = '✅ 취소됨';
+        const job = window.__jobs?.find?.(j => j.id === jobId);
+        if (job) {
+          job.status = 'cancelled';
+          job.message = '사용자가 작업을 취소함';
+          job.completedAt = Date.now();
         }
+        renderJobs();
+        if (typeof renderJobHistory === 'function') renderJobHistory();
+        
+        // 🆕 백그라운드에서 실제 프로세스 취소 (UI는 안 기다림)
+        window.api.cancelVideo(jobId).catch(err => {
+          console.warn('cancelVideo 실패:', err);
+        });
       });
     });
   }
@@ -8647,31 +8780,29 @@
       `;
     }).join('');
 
-    // 🆕 각 카드의 취소 버튼에 핸들러 연결
+    // 🆕 각 카드의 취소 버튼에 핸들러 연결 - 즉시 취소
     document.querySelectorAll('.job-cancel-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const jobId = btn.dataset.jobId;
         if (!jobId) return;
-        // 즉시 취소 (확인창 없음 — 어제 취소 버튼처럼 한 번에)
+        
+        // 🆕 즉시 UI 업데이트 (await 안 기다림)
         btn.disabled = true;
-        btn.textContent = '⏳ 취소 중...';
-        try {
-          await window.api.cancelVideo(jobId);
-          // 작업 상태 즉시 업데이트 (UI 반영)
-          const job = window.__jobs?.find?.(j => j.id === jobId);
-          if (job) {
-            job.status = 'cancelled';
-            job.message = '사용자가 작업을 취소함';
-            job.completedAt = Date.now();
-          }
-          renderJobs();
-          if (typeof renderJobHistory === 'function') renderJobHistory();
-        } catch (err) {
-          console.warn('cancelVideo 실패:', err);
-          btn.disabled = false;
-          btn.textContent = '⛔ 이 작업 취소';
+        btn.textContent = '✅ 취소됨';
+        const job = window.__jobs?.find?.(j => j.id === jobId);
+        if (job) {
+          job.status = 'cancelled';
+          job.message = '사용자가 작업을 취소함';
+          job.completedAt = Date.now();
         }
+        renderJobs();
+        if (typeof renderJobHistory === 'function') renderJobHistory();
+        
+        // 🆕 백그라운드에서 실제 프로세스 취소
+        window.api.cancelVideo(jobId).catch(err => {
+          console.warn('cancelVideo 실패:', err);
+        });
       });
     });
   }
@@ -8741,33 +8872,28 @@
   // ===== 실행 =====
   let isCancelled = false;
 
-  document.getElementById('cancelBtn').addEventListener('click', async () => {
-    // 🆕 confirm 제거 - 한 번 클릭으로 즉시 취소
+  document.getElementById('cancelBtn').addEventListener('click', () => {
+    // 🆕 즉시 취소 - UI 먼저 업데이트, 백그라운드에서 실제 취소
     isCancelled = true;
     const cancelBtn = document.getElementById('cancelBtn');
-    if (cancelBtn) {
-      cancelBtn.disabled = true;
-      cancelBtn.textContent = '⏳ 취소 중...';
-    }
-    try {
-      await window.api.cancelVideo(null);
-    } catch (e) {
-      console.warn('cancelVideo 호출 실패:', e);
-    }
+    
+    // 즉시 UI 업데이트
     log('⛔ 사용자가 작업을 취소했습니다', 'err');
-    // 🆕 작업 시작 버튼 다시 활성화 + 다른 영상 만들기 버튼 표시
     const runBtn = document.getElementById('runBtn');
     if (runBtn) runBtn.disabled = false;
     const newVideoBtn = document.getElementById('newVideoBtn');
     if (newVideoBtn) newVideoBtn.style.display = 'inline-block';
-    // 취소 버튼 정리
-    setTimeout(() => {
-      if (cancelBtn) {
-        cancelBtn.style.display = 'none';
-        cancelBtn.disabled = false;
-        cancelBtn.textContent = '⛔ 취소';
-      }
-    }, 800);
+    // 취소 버튼 즉시 숨김
+    if (cancelBtn) {
+      cancelBtn.style.display = 'none';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '⛔ 취소';
+    }
+    
+    // 🆕 백그라운드에서 실제 프로세스 취소 (UI 안 기다림)
+    window.api.cancelVideo(null).catch(e => {
+      console.warn('cancelVideo 호출 실패:', e);
+    });
   });
 
   // ssultoonPages 전역 참조용 (나중에 재정의됨)
@@ -8865,7 +8991,7 @@
       customFontColor: customState.customFontColor,
       customHighlightColor: customState.customHighlightColor,
       customBorderColor: customState.customBorderColor,
-      customAnimation: document.getElementById('animationSelect').value || null,
+      customAnimation: null,  // 🆕 애니메이션 옵션 제거됨
       // 블러 마스크 설정
       useBlurMask,
       blurMaskSettings: useBlurMask ? blurMaskSettings : null,

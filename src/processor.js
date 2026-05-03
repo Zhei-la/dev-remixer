@@ -33,99 +33,49 @@ const VOICE_CATALOG = {
   en: [
     { id: 'en-US-AriaNeural',       name: 'Aria',     gender: 'F', style: 'News, professional', recommend: true },
     { id: 'en-US-JennyNeural',      name: 'Jenny',    gender: 'F', style: 'Friendly, casual' },
-    { id: 'en-US-AmberNeural',      name: 'Amber',    gender: 'F', style: 'Warm, gentle' },
-    { id: 'en-US-AshleyNeural',     name: 'Ashley',   gender: 'F', style: 'Young, energetic' },
-    { id: 'en-US-CoraNeural',       name: 'Cora',     gender: 'F', style: 'Adult, calm' },
-    { id: 'en-US-ElizabethNeural',  name: 'Elizabeth', gender: 'F', style: 'Adult, elegant' },
-    { id: 'en-US-JaneNeural',       name: 'Jane',     gender: 'F', style: 'Young, clear' },
-    { id: 'en-US-MichelleNeural',   name: 'Michelle', gender: 'F', style: 'Adult, pleasant' },
-    { id: 'en-US-MonicaNeural',     name: 'Monica',   gender: 'F', style: 'Adult, natural' },
-    { id: 'en-US-NancyNeural',      name: 'Nancy',    gender: 'F', style: 'Adult, smooth' },
-    { id: 'en-US-SaraNeural',       name: 'Sara',     gender: 'F', style: 'Young, cheerful' },
-    { id: 'en-US-GuyNeural',        name: 'Guy',      gender: 'M', style: 'Deep, authoritative' },
-    { id: 'en-US-DavisNeural',      name: 'Davis',    gender: 'M', style: 'Casual, friendly' },
-    { id: 'en-US-BrandonNeural',    name: 'Brandon',  gender: 'M', style: 'Young, energetic' },
-    { id: 'en-US-ChristopherNeural', name: 'Christopher', gender: 'M', style: 'Adult, clear' },
-    { id: 'en-US-EricNeural',       name: 'Eric',     gender: 'M', style: 'Middle-aged, calm' },
-    { id: 'en-US-JacobNeural',      name: 'Jacob',    gender: 'M', style: 'Young, bright' },
-    { id: 'en-US-JasonNeural',      name: 'Jason',    gender: 'M', style: 'Young, confident' },
-    { id: 'en-US-RogerNeural',      name: 'Roger',    gender: 'M', style: 'Adult, warm' },
-    { id: 'en-US-SteffanNeural',    name: 'Steffan',  gender: 'M', style: 'Adult, neutral' },
-    { id: 'en-US-TonyNeural',       name: 'Tony',     gender: 'M', style: 'Adult, strong' },
+    { id: 'en-US-GuyNeural',        name: 'Guy',      gender: 'M', style: 'Deep, authoritative', recommend: true },
     { id: 'en-GB-SoniaNeural',      name: 'Sonia (UK)', gender: 'F', style: 'British, elegant' },
-    { id: 'en-GB-LibbyNeural',      name: 'Libby (UK)', gender: 'F', style: 'British, friendly' },
-    { id: 'en-GB-RyanNeural',       name: 'Ryan (UK)',  gender: 'M', style: 'British, adult' },
-    { id: 'en-GB-AlfieNeural',      name: 'Alfie (UK)', gender: 'M', style: 'British, young' },
   ],
   ja: [
     { id: 'ja-JP-NanamiNeural', name: 'Nanami',  gender: 'F', style: '청년, 친근', recommend: true },
-    { id: 'ja-JP-AoiNeural',    name: 'Aoi',     gender: 'F', style: '어린이' },
-    { id: 'ja-JP-MayuNeural',   name: 'Mayu',    gender: 'F', style: '성인, 차분' },
-    { id: 'ja-JP-ShioriNeural', name: 'Shiori',  gender: 'F', style: '성인, 부드러움' },
-    { id: 'ja-JP-KeitaNeural',  name: 'Keita',   gender: 'M', style: '청년, 깔끔' },
-    { id: 'ja-JP-DaichiNeural', name: 'Daichi',  gender: 'M', style: '성인, 신뢰' },
-    { id: 'ja-JP-NaokiNeural',  name: 'Naoki',   gender: 'M', style: '중년, 안정' },
+    { id: 'ja-JP-KeitaNeural',  name: 'Keita',   gender: 'M', style: '청년, 깔끔', recommend: true },
   ],
   zh: [
     { id: 'zh-CN-XiaoxiaoNeural', name: 'Xiaoxiao', gender: 'F', style: '청년, 밝음', recommend: true },
-    { id: 'zh-CN-XiaoyiNeural',   name: 'Xiaoyi',   gender: 'F', style: '청년, 친근' },
-    { id: 'zh-CN-XiaochenNeural', name: 'Xiaochen', gender: 'F', style: '친근, 자연' },
-    { id: 'zh-CN-XiaohanNeural',  name: 'Xiaohan',  gender: 'F', style: '따뜻함' },
-    { id: 'zh-CN-XiaomengNeural', name: 'Xiaomeng', gender: 'F', style: '청년' },
-    { id: 'zh-CN-XiaomoNeural',   name: 'Xiaomo',   gender: 'F', style: '성인' },
-    { id: 'zh-CN-XiaoqiuNeural',  name: 'Xiaoqiu',  gender: 'F', style: '성인, 차분' },
-    { id: 'zh-CN-XiaoruiNeural',  name: 'Xiaorui',  gender: 'F', style: '노년' },
-    { id: 'zh-CN-XiaoyanNeural',  name: 'Xiaoyan',  gender: 'F', style: '성인' },
-    { id: 'zh-CN-XiaozhenNeural', name: 'Xiaozhen', gender: 'F', style: '성인' },
-    { id: 'zh-CN-YunxiNeural',    name: 'Yunxi',    gender: 'M', style: '청년' },
-    { id: 'zh-CN-YunjianNeural',  name: 'Yunjian',  gender: 'M', style: '중년' },
+    { id: 'zh-CN-YunxiNeural',    name: 'Yunxi',    gender: 'M', style: '청년', recommend: true },
     { id: 'zh-CN-YunyangNeural',  name: 'Yunyang',  gender: 'M', style: '뉴스, 신뢰' },
-    { id: 'zh-CN-YunfengNeural',  name: 'Yunfeng',  gender: 'M', style: '성인' },
-    { id: 'zh-CN-YunhaoNeural',   name: 'Yunhao',   gender: 'M', style: '성인' },
-    { id: 'zh-CN-YunxiaNeural',   name: 'Yunxia',   gender: 'M', style: '청년' },
-    { id: 'zh-CN-YunyeNeural',    name: 'Yunye',    gender: 'M', style: '성인' },
-    { id: 'zh-CN-YunzeNeural',    name: 'Yunze',    gender: 'M', style: '중년' },
   ],
   es: [
     { id: 'es-ES-ElviraNeural',  name: 'Elvira',  gender: 'F', style: 'Spain, adult', recommend: true },
-    { id: 'es-ES-AbrilNeural',   name: 'Abril',   gender: 'F', style: 'Spain, young' },
-    { id: 'es-ES-AlvaroNeural',  name: 'Alvaro',  gender: 'M', style: 'Spain, adult' },
-    { id: 'es-MX-DaliaNeural',   name: 'Dalia',   gender: 'F', style: 'Mexico, friendly' },
-    { id: 'es-MX-JorgeNeural',   name: 'Jorge',   gender: 'M', style: 'Mexico, adult' },
+    { id: 'es-ES-AlvaroNeural',  name: 'Alvaro',  gender: 'M', style: 'Spain, adult', recommend: true },
   ],
   fr: [
     { id: 'fr-FR-DeniseNeural',  name: 'Denise',  gender: 'F', style: 'Adult, professional', recommend: true },
-    { id: 'fr-FR-EloiseNeural',  name: 'Eloise',  gender: 'F', style: 'Child' },
-    { id: 'fr-FR-JosephineNeural', name: 'Josephine', gender: 'F', style: 'Adult' },
-    { id: 'fr-FR-HenriNeural',   name: 'Henri',   gender: 'M', style: 'Adult, warm' },
-    { id: 'fr-FR-YvetteNeural',  name: 'Yvette',  gender: 'F', style: 'Adult' },
+    { id: 'fr-FR-HenriNeural',   name: 'Henri',   gender: 'M', style: 'Adult, warm', recommend: true },
   ],
   de: [
     { id: 'de-DE-KatjaNeural',     name: 'Katja',     gender: 'F', style: 'Adult, professional', recommend: true },
-    { id: 'de-DE-AmalaNeural',     name: 'Amala',     gender: 'F', style: 'Adult' },
-    { id: 'de-DE-ConradNeural',    name: 'Conrad',    gender: 'M', style: 'Adult' },
-    { id: 'de-DE-KillianNeural',   name: 'Killian',   gender: 'M', style: 'Adult' },
+    { id: 'de-DE-ConradNeural',    name: 'Conrad',    gender: 'M', style: 'Adult', recommend: true },
   ],
   it: [
     { id: 'it-IT-ElsaNeural',     name: 'Elsa',     gender: 'F', style: 'Adult', recommend: true },
-    { id: 'it-IT-IsabellaNeural', name: 'Isabella', gender: 'F', style: 'Young' },
-    { id: 'it-IT-DiegoNeural',    name: 'Diego',    gender: 'M', style: 'Adult' },
+    { id: 'it-IT-DiegoNeural',    name: 'Diego',    gender: 'M', style: 'Adult', recommend: true },
   ],
   pt: [
     { id: 'pt-BR-FranciscaNeural', name: 'Francisca', gender: 'F', style: 'Brazil, adult', recommend: true },
-    { id: 'pt-BR-AntonioNeural',   name: 'Antonio',   gender: 'M', style: 'Brazil, adult' },
+    { id: 'pt-BR-AntonioNeural',   name: 'Antonio',   gender: 'M', style: 'Brazil, adult', recommend: true },
   ],
   ru: [
     { id: 'ru-RU-SvetlanaNeural', name: 'Svetlana', gender: 'F', style: 'Adult', recommend: true },
-    { id: 'ru-RU-DmitryNeural',   name: 'Dmitry',   gender: 'M', style: 'Adult' },
+    { id: 'ru-RU-DmitryNeural',   name: 'Dmitry',   gender: 'M', style: 'Adult', recommend: true },
   ],
   vi: [
     { id: 'vi-VN-HoaiMyNeural',  name: 'HoaiMy',  gender: 'F', style: 'Adult', recommend: true },
-    { id: 'vi-VN-NamMinhNeural', name: 'NamMinh', gender: 'M', style: 'Adult' },
+    { id: 'vi-VN-NamMinhNeural', name: 'NamMinh', gender: 'M', style: 'Adult', recommend: true },
   ],
   th: [
     { id: 'th-TH-PremwadeeNeural', name: 'Premwadee', gender: 'F', style: 'Adult', recommend: true },
-    { id: 'th-TH-NiwatNeural',     name: 'Niwat',     gender: 'M', style: 'Adult' },
+    { id: 'th-TH-NiwatNeural',     name: 'Niwat',     gender: 'M', style: 'Adult', recommend: true },
   ],
 };
 
@@ -248,8 +198,38 @@ function toFFColor(color) {
 function runCommand(cmd, args, onStderr, jobId = null) {
   const effectiveJobId = jobId || global.__currentProcessorJobId || null;
   
+  // 🔧 빌드된 앱에서 exe 자동 검색 (절대 경로로 변환)
+  // edge-tts.exe, ffmpeg.exe 등을 그냥 파일명으로 호출하면 PATH에서 못 찾음
+  // → resources 폴더에서 직접 찾아서 절대 경로로 spawn
+  let actualCmd = cmd;
+  if (typeof cmd === 'string' && cmd.endsWith('.exe')) {
+    try {
+      const candidates = [];
+      // 빌드된 앱: process.resourcesPath
+      if (process.resourcesPath) {
+        candidates.push(path.join(process.resourcesPath, cmd));
+      }
+      // 개발 모드: app 루트
+      if (typeof __dirname === 'string') {
+        candidates.push(path.join(__dirname, '..', cmd));
+        candidates.push(path.join(__dirname, cmd));
+      }
+      // 현재 작업 디렉토리
+      candidates.push(path.join(process.cwd(), cmd));
+      
+      for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+          actualCmd = candidate;
+          break;
+        }
+      }
+    } catch (e) {
+      // 경로 검색 실패 시 원래 cmd 사용
+    }
+  }
+  
   return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args, { windowsHide: true });
+    const proc = spawn(actualCmd, args, { windowsHide: true });
     
     // 🆕 jobId가 있으면 글로벌 레지스트리에 등록 (취소 시 kill 가능)
     if (effectiveJobId && typeof global.registerChildProcess === 'function') {
@@ -711,12 +691,31 @@ const LLM_PROVIDERS = {
 
 // ===== 통합 LLM 호출 (자동 재시도 + Rate limit 대응) =====
 async function callLLM(messages, config, maxRetries = 8) {
-  const providerKey = config.llmProvider || 'groq';
-  const provider = LLM_PROVIDERS[providerKey];
+  let providerKey = config.llmProvider || 'groq';
+  let provider = LLM_PROVIDERS[providerKey];
   if (!provider) throw new Error(`알 수 없는 LLM provider: ${providerKey}`);
 
-  const apiKey = config[provider.keyField];
-  if (!apiKey) throw new Error(`${provider.name} API 키가 설정되지 않았습니다. 설정 탭에서 입력하세요.`);
+  let apiKey = config[provider.keyField];
+  
+  // 🆕 선택된 provider 키가 없으면 → 다른 provider로 자동 fallback
+  // 우선순위: 선택된 것 → openai → anthropic → groq → gemini
+  if (!apiKey) {
+    console.warn(`[LLM] ${provider.name} 키 없음. 다른 provider 검색...`);
+    const fallbackOrder = ['openai', 'anthropic', 'groq', 'gemini'];
+    for (const fbKey of fallbackOrder) {
+      if (fbKey === providerKey) continue;
+      const fbProvider = LLM_PROVIDERS[fbKey];
+      if (fbProvider && config[fbProvider.keyField]) {
+        console.log(`[LLM] 🔄 ${fbProvider.name} 키 발견 → 자동 사용`);
+        providerKey = fbKey;
+        provider = fbProvider;
+        apiKey = config[fbProvider.keyField];
+        break;
+      }
+    }
+  }
+  
+  if (!apiKey) throw new Error(`LLM API 키가 설정되지 않았습니다. 설정 탭에서 OpenAI / Anthropic / Groq / Gemini 중 하나의 API 키를 입력해주세요.`);
 
   const model = config.llmModel || provider.defaultModel;
   const payload = provider.buildPayload(messages, model);
@@ -1769,12 +1768,19 @@ async function generateAdCopy(originalText, videoDurationSec, targetLang, config
   const outroSeconds = outroChars > 0 ? outroChars / actualCps : 0;
   const availableSeconds = videoDurationSec - outroSeconds - 0.5; // 0.5초 여유
   
-  // 카피 길이 계산 (마지막 멘트 제외한 부분)
-  const targetChars = Math.floor(availableSeconds * actualCps * 0.95);
-  const minChars = Math.floor(availableSeconds * actualCps * 0.85);
-  const maxChars = Math.floor(availableSeconds * actualCps * 1.0); // 딱 맞게
+  // 🔴 카피 길이 계산 - 더 보수적으로!
+  // 가속 안 하고도 영상에 들어가도록 영상 길이의 80~90%로 제한
+  // (가속하면 빨리 말하는 느낌, 안 가속하면 자연스러움)
+  const targetChars = Math.floor(availableSeconds * actualCps * 0.85);  // 영상의 85%
+  const minChars = Math.floor(availableSeconds * actualCps * 0.70);     // 영상의 70%
+  const maxChars = Math.floor(availableSeconds * actualCps * 0.95);     // 영상의 95% (절대 한계)
   
-  console.log(`[adCopy] 영상 ${videoDurationSec}초, 마지막멘트 ${outroChars}자(${outroSeconds.toFixed(1)}초), 카피 목표 ${targetChars}자 (${minChars}~${maxChars})`);
+  // 줄 수도 영상 길이에 맞게 (한 줄 평균 1.3초로 계산)
+  const targetLineCount = Math.max(3, Math.round(availableSeconds / 1.5));
+  const maxLineCount = Math.max(5, Math.round(availableSeconds / 1.0));
+  
+  console.log(`[adCopy] 영상 ${videoDurationSec}초, 마지막멘트 ${outroChars}자(${outroSeconds.toFixed(1)}초)`);
+  console.log(`[adCopy] 카피 목표: ${minChars}~${targetChars}자 (최대 ${maxChars}자), ${targetLineCount}줄 정도 (최대 ${maxLineCount}줄)`);
 
   // 말투 설정 (반말/존댓말)
   const speechStyle = config.speechStyle || 'casual';
@@ -1810,11 +1816,17 @@ async function generateAdCopy(originalText, videoDurationSec, targetLang, config
 - 영상 길이: ${videoDurationSec.toFixed(1)}초
 - 🔴🔴🔴 **카피 글자 수 한도: 정확히 ${maxChars}자 이하!**
 - 🔴 목표: ${minChars}~${targetChars}자
-- ⛔ **${maxChars}자 초과 시 영상보다 길어져서 잘림!** 절대 초과하지 마세요!
+- 🔴🔴🔴 **목표 줄 수: ${targetLineCount}줄 (최대 ${maxLineCount}줄)** - 영상 길이가 ${videoDurationSec.toFixed(0)}초니까 이만큼이면 충분!
+- ⛔ **${maxChars}자 또는 ${maxLineCount}줄 초과 시 영상보다 길어져서 빨리 말함!** 절대 초과 금지!
 - ⚠️ **글자 수 셀 때 공백 포함, 줄바꿈 제외**
+- 💡 **짧고 임팩트 있게! 길게 풀어 쓰지 마세요!**
 
-**원본 스크립트 (참고만):**
-${originalText}
+**원본 영상 음성 (반드시 이 내용을 기반으로 카피 작성!):**
+${originalText && originalText.trim().length > 20 ? originalText : '(음성 인식 결과 없음 - 영상 분석 정보 활용)'}
+
+🔴🔴🔴 위 원본 음성에 나온 **상품/내용**을 반드시 광고 카피에 반영하세요!
+🔴 원본에 없는 상품을 임의로 만들지 마세요!
+🔴 원본이 있으면 그 내용을 바탕으로 짧고 임팩트 있게 재구성하세요!
 
 ────────────────────
 [출력 방식 - 핵심 변경]
@@ -2072,6 +2084,35 @@ Write the ${targetLangName} ad copy now (minimum ${minChars} characters):`;
       console.log(`[adCopy] 금지어로 ${removed}줄 제거됨`);
     }
   }
+
+  // 🔴🔴🔴 강제 길이 제한 (LLM이 무시했을 경우 안전장치)
+  // 영상 길이 × actualCps × 1.0 = 절대 한계
+  // 예: 22초 영상, ko 언어 → 22 × 7 × 1.15 = 약 177자
+  let totalChars = lines.reduce((sum, l) => sum + l.length, 0);
+  
+  // 1) 글자 수 초과 → 잘라내기
+  if (totalChars > maxChars) {
+    console.warn(`[adCopy] ⚠️ LLM이 글자 한도(${maxChars}자) 초과! 실제: ${totalChars}자, ${lines.length}줄 → 강제 잘라냄`);
+    const truncated = [];
+    let charCount = 0;
+    for (const line of lines) {
+      if (charCount + line.length > maxChars) {
+        break;
+      }
+      truncated.push(line);
+      charCount += line.length;
+    }
+    lines = truncated;
+  }
+  
+  // 2) 줄 수 초과 → 잘라내기
+  if (lines.length > maxLineCount) {
+    console.warn(`[adCopy] ⚠️ LLM이 줄 수 한도(${maxLineCount}줄) 초과! 실제: ${lines.length}줄 → ${maxLineCount}줄로 자름`);
+    lines = lines.slice(0, maxLineCount);
+  }
+  
+  totalChars = lines.reduce((sum, l) => sum + l.length, 0);
+  console.log(`[adCopy] ✅ 최종: ${totalChars}자, ${lines.length}줄 (한도 ${maxChars}자/${maxLineCount}줄)`);
 
   return lines.join('\n');
 }
@@ -3132,7 +3173,34 @@ function escapeDrawtext(text) {
 function getFontPath(lang, customFont, sampleText) {
   // 커스텀 폰트가 지정되면 우선
   if (customFont && AVAILABLE_FONTS[customFont]) {
-    return `C\\:/Windows/Fonts/${AVAILABLE_FONTS[customFont].file}`;
+    const fontInfo = AVAILABLE_FONTS[customFont];
+    // 🆕 번들 폰트(fonts/ 폴더)와 시스템 폰트(C:/Windows/Fonts/) 구분
+    if (fontInfo.bundled) {
+      // 번들 폰트: resources/fonts/ 또는 프로젝트 루트의 fonts/
+      try {
+        const baseDir = process.resourcesPath || path.join(__dirname, '..');
+        const candidates = [
+          path.join(baseDir, 'fonts', fontInfo.file),
+          path.join(__dirname, '..', 'fonts', fontInfo.file),
+          path.join(process.cwd(), 'fonts', fontInfo.file),
+        ];
+        for (const candidate of candidates) {
+          if (fs.existsSync(candidate)) {
+            // ffmpeg drawtext용 경로 형식 (백슬래시 → 슬래시, 콜론 이스케이프)
+            const ffmpegPath = candidate.replace(/\\/g, '/').replace(/:/g, '\\:');
+            console.log(`[폰트] ✅ ${fontInfo.name}: ${candidate}`);
+            return ffmpegPath;
+          }
+        }
+        console.warn(`[폰트] ❌ 번들 폰트 못 찾음: ${fontInfo.file} - 기본 폰트 사용`);
+      } catch (e) {
+        console.warn(`[폰트] 경로 검색 실패: ${e.message}`);
+      }
+      // 못 찾으면 기본 폰트로 폴백
+      return `C\\:/Windows/Fonts/malgun.ttf`;
+    }
+    // 시스템 폰트
+    return `C\\:/Windows/Fonts/${fontInfo.file}`;
   }
 
   // 샘플 텍스트가 있으면 실제 사용된 문자로 언어 감지
@@ -3156,8 +3224,9 @@ function getFontPath(lang, customFont, sampleText) {
   return `C\\:/Windows/Fonts/${fontFile}`;
 }
 
-// ===== 사용 가능한 폰트 (Windows 기본) =====
+// ===== 사용 가능한 폰트 (Windows 기본 + 번들 카페24) =====
 const AVAILABLE_FONTS = {
+  // 시스템 폰트 (Windows 기본)
   malgun: { name: '맑은 고딕', file: 'malgun.ttf', langs: ['ko'] },
   malgunbd: { name: '맑은 고딕 Bold', file: 'malgunbd.ttf', langs: ['ko'] },
   batang: { name: '바탕', file: 'batang.ttc', langs: ['ko'] },
@@ -3171,6 +3240,18 @@ const AVAILABLE_FONTS = {
   tahoma: { name: 'Tahoma', file: 'tahoma.ttf', langs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru'] },
   yugothic: { name: '游ゴシック', file: 'YuGothM.ttc', langs: ['ja'] },
   msyahei: { name: '微软雅黑', file: 'msyh.ttc', langs: ['zh'] },
+  // 🆕 카페24 무료 폰트 (번들 - fonts/ 폴더)
+  cafe24_danjunghae: { name: '카페24 단정해', file: 'Cafe24Danjunghae-v2.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_dongdong: { name: '카페24 동동', file: 'Cafe24DongdongRegular.ttf', langs: ['ko'], bundled: true },
+  cafe24_dongdong_lt: { name: '카페24 동동 Light', file: 'Cafe24DongdongLight.ttf', langs: ['ko'], bundled: true },
+  cafe24_moyamoya: { name: '카페24 모야모야', file: 'Cafe24Moyamoya-Face-v1.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_ohsquare: { name: '카페24 오스퀘어', file: 'Cafe24Ohsquare-v2.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_ohsquare_air: { name: '카페24 오스퀘어 Air', file: 'Cafe24OhsquareAir-v2.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_oneprettynight: { name: '카페24 원프리티나잇', file: 'Cafe24Oneprettynight-v2.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_simplehae: { name: '카페24 심플해', file: 'Cafe24Simplehae-v2.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_ssurround: { name: '카페24 써라운드', file: 'Cafe24Ssurround-v2.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_supermagic: { name: '카페24 슈퍼매직 Bold', file: 'Cafe24Supermagic-Bold-v1.0.ttf', langs: ['ko'], bundled: true },
+  cafe24_supermagic_rg: { name: '카페24 슈퍼매직', file: 'Cafe24Supermagic-Regular-v1.0.ttf', langs: ['ko'], bundled: true },
 };
 
 // ===== 자막 사이즈 프리셋 =====
@@ -3204,12 +3285,18 @@ function splitSegmentsForDisplay(segments, splitMode = 'phrase', targetLang = 'k
   const GAP = 0;
   const START_OFFSET = 0.3;
 
-  // 수동 [HL] 마커 처리 함수
-  // 사용자가 직접 [HL]을 텍스트에 넣었을 수도 있으므로 여기서도 검사
+  // 수동 [HL] / [[ ]] 마커 처리 함수
+  // 사용자가 직접 [HL] 또는 [[단어]]을 텍스트에 넣었을 수도 있으므로 여기서도 검사
   const processHighlight = (text, existingFlag) => {
+    // [HL] 마커 처리
     const hlMatch = text.match(/^\[HL\]\s*(.+)$/i);
     if (hlMatch) {
       return { text: hlMatch[1].trim(), highlight: true };
+    }
+    // 🆕 [[ ]] 마커 처리 - 텍스트에 [[가 있으면 강조 활성화
+    if (text.includes('[[') && text.includes(']]')) {
+      const cleanedText = text.replace(/\[\[(.+?)\]\]/g, '$1');
+      return { text: cleanedText, highlight: true };
     }
     return { text, highlight: existingFlag === true };
   };
@@ -4218,7 +4305,13 @@ async function composeFinalVideo({
 
       // 자동 줄바꿈 - 화면 폭에 맞게 (영어 등 알파벳 언어에 특히 필요)
       let cleanText = seg.text || '';
+      
+      // 🔴🔴🔴 [[ ]] 마커 검사 - 전체 세그먼트 단위로 검사 (줄바꿈 전!)
+      // 텍스트 전체에 [[ ]] 있으면 부분 강조 모드
+      const segHasMarker = cleanText.includes('[[') && cleanText.includes(']]');
+      
       // 폰트가 못 그리는 특수 문자를 ASCII로 변환 (네모 □ 방지)
+      // ⚠️ [[ ]] 마커는 보존! 나중에 부분 강조 처리에 사용
       cleanText = cleanText
         .replace(/[\u2018\u2019\u201A\u201B]/g, "'")  // 곡선 작은따옴표 → '
         .replace(/[\u201C\u201D\u201E\u201F]/g, '"')  // 곡선 큰따옴표 → "
@@ -4232,18 +4325,118 @@ async function composeFinalVideo({
         .replace(/[\u00AB\u00BB]/g, '"')                // french quotes → "
         .trim();
 
+      // 색상 (강조 색상 / 일반 색상)
+      const highlightColor = toFFColor(config.customHighlightColor || '#FFEA00'); // 기본 노란색
+      const normalColor = style.fontColor;
+      // seg.highlight 면 기본을 강조색으로 (전체 강조 모드)
+      const baseColor = seg.highlight === true ? highlightColor : normalColor;
+      
+      // 🆕 강조 모드 로그
+      if (segHasMarker) {
+        console.log(`[자막] ✨ 부분 강조 모드: "${cleanText.substring(0, 40)}..." (강조색: ${highlightColor})`);
+      }
+      
+      // ===== 🔴 [[ ]] 부분 강조 모드 (단어별) =====
+      // 줄바꿈 무시하고 한 줄로 그림 (위치 계산이 복잡해서)
+      if (segHasMarker) {
+        // [[ ]] 마커로 분할
+        const segParts = parseHighlightSegments(cleanText);
+        
+        // 전체 너비 추정 (가로 중앙 정렬)
+        let totalLineWidth = 0;
+        for (const sp of segParts) {
+          totalLineWidth += estimateTextWidth(sp.text, style.fontSize);
+        }
+        
+        // 시작 X = 화면 중앙 - 전체너비/2 (ffmpeg 표현식)
+        const startXExpr = `(w-${totalLineWidth})/2`;
+        
+        // y 좌표 (단일 줄)
+        const yExprBase = `(${yPos})`;
+        
+        // 애니메이션은 단일 줄에 동일 적용
+        let alphaExpr = null;
+        let yExpr = yExprBase;
+        switch (style.animation) {
+          case 'fade': {
+            const fade = 0.2;
+            alphaExpr = `if(lt(t,${startT}+${fade}),(t-${startT})/${fade},if(gt(t,${endT}-${fade}),(${endT}-t)/${fade},1))`;
+            break;
+          }
+          case 'slide_up': {
+            const slide = 0.3;
+            yExpr = `if(lt(t,${startT}+${slide}),(${yExprBase})+(${slide}-(t-${startT}))*100,${yExprBase})`;
+            alphaExpr = `if(lt(t,${startT}+${slide}),(t-${startT})/${slide},1)`;
+            break;
+          }
+          case 'pop': {
+            const pop = 0.15;
+            alphaExpr = `if(lt(t,${startT}+${pop}),(t-${startT})/${pop},1)`;
+            break;
+          }
+          default:
+            break;
+        }
+        
+        let currentLabel = lastLabel;
+        let currentXOffset = 0;
+        
+        segParts.forEach((sp, spIdx) => {
+          if (!sp.text || sp.text.length === 0) return;
+          
+          const partLabel = `sub${idx}_p${spIdx}`;
+          const partColor = sp.highlight ? highlightColor : baseColor;
+          const partBorderColor = sp.highlight ? toFFColor('#000000') : style.borderColor;
+          const partWidth = estimateTextWidth(sp.text, style.fontSize);
+          
+          // 각 부분을 별도 파일로 저장
+          const partFilePath = path.join(jobDir, `sub_${idx}_p${spIdx}.txt`);
+          fs.writeFileSync(partFilePath, sp.text, 'utf-8');
+          subFilePaths.push(partFilePath);
+          const escapedPartPath = partFilePath.replace(/\\/g, '/').replace(/:/g, '\\:');
+          
+          // x 좌표 = 시작X + 누적오프셋
+          const partXExpr = `(${startXExpr})+${currentXOffset}`;
+          
+          const partOpts = [
+            `fontfile='${fontPath}'`,
+            `textfile='${escapedPartPath}'`,
+            `fontcolor=${partColor}`,
+            `fontsize=${style.fontSize}`,
+            `bordercolor=${partBorderColor}`,
+            `borderw=${style.borderWidth}`,
+            `x=${partXExpr}`,
+            `y=${yExpr}`,
+            `enable='between(t,${startT},${endT})'`,
+          ];
+          
+          if (style.bgEnabled) {
+            partOpts.push('box=1', `boxcolor=${style.bgColor}`, 'boxborderw=20');
+          }
+          if (style.glowEnabled && style.glowColor) {
+            const glowHex = style.glowColor.replace('#', '');
+            partOpts.push(`shadowcolor=0x${glowHex}@0.8`, 'shadowx=0', 'shadowy=0');
+          } else if (style.shadowEnabled) {
+            partOpts.push('shadowcolor=black@0.6', 'shadowx=3', 'shadowy=3');
+          }
+          if (alphaExpr) {
+            partOpts.push(`alpha='${alphaExpr}'`);
+          }
+          
+          filters.push(`[${currentLabel}]drawtext=${partOpts.join(':')}[${partLabel}]`);
+          currentLabel = partLabel;
+          currentXOffset += partWidth;
+        });
+        
+        lastLabel = currentLabel;
+        return; // 이 세그먼트 끝 (다음 세그먼트로)
+      }
+      
+      // ===== 🟢 일반 모드 ([[ ]] 없음) - 기존 로직 =====
       // 줄 단위로 분할 (drawtext가 여러 줄을 \n으로 못 그리므로 별도 처리)
       const wrappedText = wrapTextInLines(cleanText, wrapMax);
       const lines = wrappedText.split('\n').filter(l => l.trim());
       if (lines.length === 0) return;
-
-      // 강조 세그먼트면 색 다르게 (포인트 자막)
-      const segFontColor = seg.highlight
-        ? toFFColor(config.customHighlightColor || '#FFEA00') // 기본 노란색
-        : style.fontColor;
-      const segBorderColor = seg.highlight
-        ? toFFColor('#000000')
-        : style.borderColor;
 
       // 줄 높이 계산 (폰트 크기 + line_spacing)
       const lineHeight = Math.floor(style.fontSize * 1.25);
@@ -4253,12 +4446,10 @@ async function composeFinalVideo({
 
       lines.forEach((line, lineIdx) => {
         const nextLabel = `sub${idx}_${lineIdx}`;
-
-        // 각 줄을 별도 파일로 저장
-        const subFilePath = path.join(jobDir, `sub_${idx}_${lineIdx}.txt`);
-        fs.writeFileSync(subFilePath, line, 'utf-8');
-        subFilePaths.push(subFilePath);
-        const escapedSubPath = subFilePath.replace(/\\/g, '/').replace(/:/g, '\\:');
+        
+        // 🔴 안전장치: line에 [[ ]] 남아있으면 무조건 제거 (영상에 절대 안 보이게)
+        line = line.replace(/\[\[(.+?)\]\]/g, '$1').replace(/\[\[|\]\]/g, '');
+        if (!line.trim()) return;
 
         let alphaExpr = null;
         let xExpr = '(w-text_w)/2'; // 가로 중앙
@@ -4313,12 +4504,19 @@ async function composeFinalVideo({
             break;
         }
 
+        // ===== 일반 모드: [[ ]] 없는 줄 → 한 번에 그리기 =====
+        // 각 줄을 별도 파일로 저장
+        const subFilePath = path.join(jobDir, `sub_${idx}_${lineIdx}.txt`);
+        fs.writeFileSync(subFilePath, line, 'utf-8');
+        subFilePaths.push(subFilePath);
+        const escapedSubPath = subFilePath.replace(/\\/g, '/').replace(/:/g, '\\:');
+
         const opts = [
           `fontfile='${fontPath}'`,
           `textfile='${escapedSubPath}'`,
-          `fontcolor=${segFontColor}`,
+          `fontcolor=${baseColor}`,
           `fontsize=${style.fontSize}`,
-          `bordercolor=${segBorderColor}`,
+          `bordercolor=${style.borderColor}`,
           `borderw=${style.borderWidth}`,
           `x=${xExpr}`,
           `y=${yExpr}`,
@@ -6036,17 +6234,23 @@ Continue naturally in the same tone. One sentence per line. No labels.`;
       const useFfmpegSpeedup = isTypecastUsed || isElevenLabsUsed;
       
       if (useFfmpegSpeedup) {
-        // 🔧 정확히 영상 길이에 맞추는 가속 비율 계산 (95% 안전 마진)
-        // 예: TTS 22초 / 영상 17초 = 1.29배로 가속해야 17초 됨
-        // 안전 마진 적용: 영상의 95%로 맞춤 → TTS / (videoLen × 0.95)
-        const targetTtsLen = videoLen * 0.95; // 영상의 95%로 맞춤
+        // 🔧 정확히 영상 길이에 맞추는 가속 비율 계산
+        // 🔴 중요: 라인 사이 GAP(0.15초)도 고려해야 함!
+        // 예: 15줄 → 14개 GAP × 0.15초 = 2.1초 추가됨
+        // 그래서 TTS 자체는 (영상길이 - 총 GAP) 안에 들어가야 함
+        const GAP_BETWEEN_LINES = 0.15;
+        const numGaps = Math.max(0, ttsLines.length - 1);
+        const totalGapTime = numGaps * GAP_BETWEEN_LINES;
+        // 영상 길이에서 GAP 빼고, 추가 안전 마진 0.5초
+        const targetTtsLen = Math.max(1.0, videoLen - totalGapTime - 0.5);
         let speedFactor = totalTtsDuration / targetTtsLen;
         
         // ffmpeg atempo는 0.5~100배까지 지원하지만 너무 빠르면 자연스럽지 못함
         // 하지만 영상 길이 맞추는 게 우선이므로 최대 2배까지 허용
         speedFactor = Math.min(2.0, Math.max(1.05, speedFactor));
         
-        console.log(`[tts] → ffmpeg로 속도 ${speedFactor.toFixed(3)}배 조절 (${isTypecastUsed ? '타입캐스트' : 'ElevenLabs'}) - 목표 ${targetTtsLen.toFixed(1)}s`);
+        console.log(`[tts] → ffmpeg 속도 ${speedFactor.toFixed(3)}배 (${isTypecastUsed ? '타입캐스트' : 'ElevenLabs'})`);
+        console.log(`[tts]   영상 ${videoLen.toFixed(1)}s = TTS ${targetTtsLen.toFixed(1)}s + GAP ${totalGapTime.toFixed(1)}s + 마진 0.5s`);
         
         for (const tl of ttsLines) {
           try {
@@ -6076,13 +6280,19 @@ Continue naturally in the same tone. One sentence per line. No labels.`;
         }
         
         // 🔧 1차 가속 후 길이 확인 - 여전히 길면 추가 가속
+        // 🔴 자막 끝 시간 = TTS 합계 + GAP 합계 → 이게 영상 길이 초과하면 안 됨
+        const GAP_BETWEEN = 0.15;
+        const numGapsCheck = Math.max(0, ttsLines.length - 1);
+        const totalGapsCheck = numGapsCheck * GAP_BETWEEN;
         let newTotalDuration = ttsLines.reduce((s, tl) => s + tl.duration, 0);
-        console.log(`[tts] 1차 가속 후: ${newTotalDuration.toFixed(1)}s (목표 ${videoLen.toFixed(1)}s)`);
+        const newTotalWithGaps = newTotalDuration + totalGapsCheck;
+        console.log(`[tts] 1차 가속 후: TTS ${newTotalDuration.toFixed(1)}s + GAP ${totalGapsCheck.toFixed(1)}s = ${newTotalWithGaps.toFixed(1)}s (영상 ${videoLen.toFixed(1)}s)`);
         
-        if (newTotalDuration > videoLen + 0.3) {
-          // 추가 가속 필요
-          const extraSpeedFactor = newTotalDuration / (videoLen * 0.95);
-          console.log(`[tts] 🔄 추가 가속 ${extraSpeedFactor.toFixed(3)}배 (여전히 ${(newTotalDuration - videoLen).toFixed(1)}초 김)`);
+        if (newTotalWithGaps > videoLen + 0.3) {
+          // 추가 가속 필요 - GAP까지 고려한 목표
+          const targetWithMargin = Math.max(1.0, videoLen - totalGapsCheck - 0.3);
+          const extraSpeedFactor = newTotalDuration / targetWithMargin;
+          console.log(`[tts] 🔄 추가 가속 ${extraSpeedFactor.toFixed(3)}배 (자막 끝이 ${(newTotalWithGaps - videoLen).toFixed(1)}초 초과)`);
           
           for (const tl of ttsLines) {
             try {

@@ -63,8 +63,13 @@ function createWindow(htmlFile = 'login.html') {
     title: APP_DISPLAY_NAME,
     width: htmlFile === 'login.html' ? 520 : 1400,
     height: htmlFile === 'login.html' ? 720 : 900,
-    minWidth: htmlFile === 'login.html' ? 480 : 1100,
-    minHeight: htmlFile === 'login.html' ? 680 : 750,
+    minWidth: htmlFile === 'login.html' ? 480 : 800,   // 🆕 800까지 작게 가능
+    minHeight: htmlFile === 'login.html' ? 680 : 600,  // 🆕 600까지 작게 가능
+    // 🆕 창 크기 조절 / 최대화 / 전체화면 명시적으로 활성화
+    resizable: true,
+    maximizable: true,
+    minimizable: true,
+    fullscreenable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -3219,6 +3224,14 @@ ipcMain.handle('get-random-topics', () => {
 });
 
 // ===== 🆕 쿠팡 파트너스 검색/링크 발급 =====
+// ===== 🔐 관리자 쿠팡 API 키 (모든 사용자 공유) =====
+// 이 키는 관리자(제일라)의 쿠팡 파트너스 API 키
+// 사용자가 본인 API 키 등록 안 해도 자동으로 이 키를 사용
+const ADMIN_COUPANG_API = {
+  accessKey: '78bca899-21fd-4ede-a145-aa40395b424b',
+  secretKey: '5a7265ff03e1fda79924579323e0a92d5a47a3c4',
+};
+
 ipcMain.handle('coupang-search', async (event, payload) => {
   try {
     console.log('');
@@ -3237,7 +3250,12 @@ ipcMain.handle('coupang-search', async (event, payload) => {
     const { searchCoupangProducts } = require('./processor');
     const keyword = (payload?.keyword || '').trim();
     const limit = parseInt(payload?.limit) || 20;
-    const adminApiKeys = payload?.adminApiKeys || null;
+    // 🔧 사용자가 보낸 키가 없거나 비어있으면 → 관리자 키 자동 사용
+    let adminApiKeys = payload?.adminApiKeys || null;
+    if (!adminApiKeys || !adminApiKeys.accessKey || !adminApiKeys.secretKey) {
+      console.log('[coupang-search] 🔐 사용자 키 없음 → 관리자 API 키 자동 사용');
+      adminApiKeys = ADMIN_COUPANG_API;
+    }
     
     if (!keyword) {
       console.log('[coupang-search] ❌ 검색어 없음');
@@ -3265,7 +3283,12 @@ ipcMain.handle('coupang-deeplink', async (event, payload) => {
     const { generateCoupangDeeplink } = require('./processor');
     const productUrl = (payload?.productUrl || '').trim();
     const userLptag = (payload?.userLptag || '').trim();
-    const adminApiKeys = payload?.adminApiKeys || null;
+    // 🔧 사용자가 보낸 키가 없거나 비어있으면 → 관리자 키 자동 사용
+    let adminApiKeys = payload?.adminApiKeys || null;
+    if (!adminApiKeys || !adminApiKeys.accessKey || !adminApiKeys.secretKey) {
+      console.log('[coupang-deeplink] 🔐 사용자 키 없음 → 관리자 API 키 자동 사용');
+      adminApiKeys = ADMIN_COUPANG_API;
+    }
     
     if (!productUrl) {
       return { success: false, error: '상품 URL이 없습니다' };
@@ -3328,10 +3351,12 @@ ipcMain.handle('edge-tts-preview', async (event, payload) => {
     
     if (!voiceId) return { success: false, error: 'Voice ID가 없습니다' };
     
-    // edge-tts.exe 경로 (앱 폴더 기준)
+    // edge-tts.exe 경로 (resources 폴더 기준)
     const path = require('path');
     const isPackaged = app.isPackaged;
-    const baseDir = isPackaged ? path.dirname(app.getPath('exe')) : path.join(__dirname, '..');
+    // 빌드된 앱: resources/edge-tts.exe
+    // 개발 모드: 프로젝트 루트의 edge-tts.exe
+    const baseDir = isPackaged ? process.resourcesPath : path.join(__dirname, '..');
     const edgeTtsPath = process.platform === 'win32' 
       ? path.join(baseDir, 'edge-tts.exe')
       : path.join(baseDir, 'edge-tts');
