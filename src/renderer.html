@@ -4723,10 +4723,11 @@
   }
   
   // 🆕 더빙 옵션 미리듣기 버튼 핸들러
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     // 🔴 빌드된 앱에서 카페24 폰트 동적 로드 (file:// 절대 경로)
     try {
-      const resourcesPath = window.api?.getResourcesPath?.() || '';
+      const resourcesPath = window.api?.getResourcesPath ? await window.api.getResourcesPath() : '';
+      console.log('[폰트] resourcesPath 받음:', resourcesPath);
       if (resourcesPath) {
         const fontList = [
           { name: 'Cafe24 Danjunghae', file: 'Cafe24Danjunghae-v2.0.ttf' },
@@ -4752,7 +4753,9 @@
         }
         styleEl.textContent = css;
         document.head.appendChild(styleEl);
-        console.log('[폰트] ✅ 동적 로드 완료:', fontList.length, '개');
+        console.log('[폰트] ✅ 동적 로드 완료:', fontList.length, '개, basePath:', basePath);
+      } else {
+        console.warn('[폰트] ⚠️ resourcesPath 빈 값 - 정적 @font-face만 사용 (npm start 모드)');
       }
     } catch (e) {
       console.warn('[폰트] 동적 로드 실패:', e);

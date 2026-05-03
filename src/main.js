@@ -674,6 +674,15 @@ ipcMain.handle('save-config', (e, config) => {
   return true;
 });
 
+// 🆕 폰트 미리보기용 - resources 경로 반환 (main process에서만 정확)
+ipcMain.handle('get-resources-path', () => {
+  // 빌드된 앱: process.resourcesPath
+  // 개발 모드: 프로젝트 루트
+  const resPath = process.resourcesPath || path.join(__dirname, '..');
+  console.log('[get-resources-path] 반환:', resPath);
+  return resPath;
+});
+
 ipcMain.handle('open-work-folder', () => {
   shell.openPath(getWorkDir());
 });

@@ -4065,21 +4065,21 @@ async function composeFinalVideo({
   //    대충 평균 fontSize * 0.75 사용
 
   function estimateTextWidth(text, fontSize) {
-    // 글자별 대략 너비 (실측 기반 조정)
+    // 글자별 대략 너비 (실측 기반 조정 - 더 정확하게)
     let w = 0;
     for (const ch of text) {
       if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(ch)) {
-        w += fontSize * 0.92;  // 한글 (조정: 0.98 → 0.92)
+        w += fontSize * 0.85;  // 한글 (실제 한글은 정사각형보다 좁음)
       } else if (/[a-zA-Z]/.test(ch)) {
-        w += fontSize * 0.50;  // 영문
+        w += fontSize * 0.48;  // 영문
       } else if (/[0-9]/.test(ch)) {
-        w += fontSize * 0.55;  // 숫자
+        w += fontSize * 0.52;  // 숫자
       } else if (/\s/.test(ch)) {
-        w += fontSize * 0.28;  // 공백 (조정: 0.35 → 0.28)
+        w += fontSize * 0.20;  // 공백 (대폭 축소)
       } else if (/[!?.,]/.test(ch)) {
-        w += fontSize * 0.30;  // 구두점
+        w += fontSize * 0.25;  // 구두점
       } else {
-        w += fontSize * 0.60;
+        w += fontSize * 0.55;
       }
     }
     return w;
