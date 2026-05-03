@@ -4363,7 +4363,9 @@ async function composeFinalVideo({
       
       // 🔴🔴🔴 [[ ]] 마커 검사 - 전체 세그먼트 단위로 검사 (줄바꿈 전!)
       // 텍스트 전체에 [[ ]] 있으면 부분 강조 모드
-      const segHasMarker = cleanText.includes('[[') && cleanText.includes(']]');
+      // 🔴 단순화: [[ ]] 마커는 일단 제거하고 일반 자막으로 그림 (띄어쓰기/줄바꿈 정확)
+      // 강조는 전체 줄을 강조색으로 (seg.highlight가 true면)
+      const segHasMarker = false;  // 🔴 부분 강조 모드 비활성화 - 일반 모드로 통일
       
       // 폰트가 못 그리는 특수 문자를 ASCII로 변환 (네모 □ 방지)
       // ⚠️ [[ ]] 마커는 보존! 나중에 부분 강조 처리에 사용
@@ -4488,6 +4490,9 @@ async function composeFinalVideo({
       }
       
       // ===== 🟢 일반 모드 ([[ ]] 없음) - 기존 로직 =====
+      // 🔴 [[ ]] 마커 먼저 제거 (줄바꿈 계산 정확하게)
+      cleanText = cleanText.replace(/\[\[(.+?)\]\]/g, '$1').replace(/\[\[|\]\]/g, '');
+      
       // 줄 단위로 분할 (drawtext가 여러 줄을 \n으로 못 그리므로 별도 처리)
       const wrappedText = wrapTextInLines(cleanText, wrapMax);
       const lines = wrappedText.split('\n').filter(l => l.trim());
