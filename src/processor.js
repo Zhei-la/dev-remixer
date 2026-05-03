@@ -691,7 +691,22 @@ const LLM_PROVIDERS = {
 
 // ===== 통합 LLM 호출 (자동 재시도 + Rate limit 대응) =====
 async function callLLM(messages, config, maxRetries = 8) {
-  let providerKey = config.llmProvider || 'groq';
+  let providerKey = config.llmProvider || 'auto';
+  
+  // 🆕 'auto' 모드: 사용 가능한 키 중 OpenAI 우선
+  if (providerKey === 'auto') {
+    const autoOrder = ['openai', 'anthropic', 'groq', 'gemini'];
+    for (const fbKey of autoOrder) {
+      const fbProvider = LLM_PROVIDERS[fbKey];
+      if (fbProvider && config[fbProvider.keyField]) {
+        providerKey = fbKey;
+        console.log(`[LLM] 🤖 자동 모드: ${fbProvider.name} 사용`);
+        break;
+      }
+    }
+    if (providerKey === 'auto') providerKey = 'groq'; // 키 없으면 기본 groq
+  }
+  
   let provider = LLM_PROVIDERS[providerKey];
   if (!provider) throw new Error(`알 수 없는 LLM provider: ${providerKey}`);
 
@@ -716,6 +731,8 @@ async function callLLM(messages, config, maxRetries = 8) {
   }
   
   if (!apiKey) throw new Error(`LLM API 키가 설정되지 않았습니다. 설정 탭에서 OpenAI / Anthropic / Groq / Gemini 중 하나의 API 키를 입력해주세요.`);
+  
+  console.log(`[LLM] ✅ 사용: ${provider.name}`);
 
   const model = config.llmModel || provider.defaultModel;
   const payload = provider.buildPayload(messages, model);
@@ -3171,6 +3188,17 @@ function escapeDrawtext(text) {
 }
 
 function getFontPath(lang, customFont, sampleText) {
+  // 🆕 ffmpeg drawtext용 경로 변환 (Windows 호환 강화)
+  // - 백슬래시 → 슬래시
+  // - 콜론 → 이스케이프 (\:)
+  // - 작은따옴표 → 이스케이프
+  const toFFmpegPath = (winPath) => {
+    return winPath
+      .replace(/\\/g, '/')           // \ → /
+      .replace(/:/g, '\\:')           // : → \:
+      .replace(/'/g, "\\'");          // ' → \'
+  };
+  
   // 커스텀 폰트가 지정되면 우선
   if (customFont && AVAILABLE_FONTS[customFont]) {
     const fontInfo = AVAILABLE_FONTS[customFont];
@@ -3184,19 +3212,23 @@ function getFontPath(lang, customFont, sampleText) {
           path.join(__dirname, '..', 'fonts', fontInfo.file),
           path.join(process.cwd(), 'fonts', fontInfo.file),
         ];
+        console.log(`[폰트] 검색 시작: ${fontInfo.file}`);
+        console.log(`[폰트] resourcesPath: ${process.resourcesPath || 'N/A'}`);
+        console.log(`[폰트] __dirname: ${__dirname}`);
         for (const candidate of candidates) {
-          if (fs.existsSync(candidate)) {
-            // ffmpeg drawtext용 경로 형식 (백슬래시 → 슬래시, 콜론 이스케이프)
-            const ffmpegPath = candidate.replace(/\\/g, '/').replace(/:/g, '\\:');
-            console.log(`[폰트] ✅ ${fontInfo.name}: ${candidate}`);
+          const exists = fs.existsSync(candidate);
+          console.log(`[폰트]   ${exists ? '✅ 발견' : '❌ 없음'}: ${candidate}`);
+          if (exists) {
+            const ffmpegPath = toFFmpegPath(candidate);
+            console.log(`[폰트] 🎨 적용: ${fontInfo.name} → ${ffmpegPath}`);
             return ffmpegPath;
           }
         }
-        console.warn(`[폰트] ❌ 번들 폰트 못 찾음: ${fontInfo.file} - 기본 폰트 사용`);
+        console.warn(`[폰트] ❌ 번들 폰트 못 찾음: ${fontInfo.file} - 시스템 폰트(맑은고딕)로 폴백`);
       } catch (e) {
         console.warn(`[폰트] 경로 검색 실패: ${e.message}`);
       }
-      // 못 찾으면 기본 폰트로 폴백
+      // 못 찾으면 시스템 한글 폰트로 폴백
       return `C\\:/Windows/Fonts/malgun.ttf`;
     }
     // 시스템 폰트
@@ -3969,8 +4001,8 @@ async function composeFinalVideo({
       if (match.index > lastIdx) {
         segments.push({ text: text.substring(lastIdx, match.index), highlight: false });
       }
-      // 강조 텍스트
-      segments.push({ text: match[1], highlight: true });
+      // 강조 텍스트 (앞뒤 공백 trim)
+      segments.push({ text: match[1].trim(), highlight: true });
       lastIdx = regex.lastIndex;
     }
     // 남은 일반 텍스트
@@ -3980,7 +4012,36 @@ async function composeFinalVideo({
     if (segments.length === 0) {
       segments.push({ text, highlight: false });
     }
-    return segments;
+    // 🆕 빈 세그먼트 제거 + 연속 공백 단일 공백으로
+    let result = segments
+      .filter(s => s.text && s.text.length > 0)
+      .map(s => ({ ...s, text: s.text.replace(/\s+/g, ' ') }));
+    
+    // 🔴 핵심 수정: 일반 부분 양끝 공백 trim
+    // 그리고 강조 부분 양옆에 자체 공백 포함시키기
+    // (drawtext는 끝 공백을 너비에 포함 안 시킴 → 빈 공간 생기는 원인)
+    result = result.map((s, i) => {
+      if (s.highlight) {
+        // 강조 부분: 양옆에 공백 포함 (앞뒤 부분이 일반이면)
+        const prev = i > 0 ? result[i - 1] : null;
+        const next = i < result.length - 1 ? result[i + 1] : null;
+        let t = s.text.trim();
+        // 앞에 일반 텍스트가 있으면 → 공백을 강조에 붙임 (앞공백)
+        if (prev && !prev.highlight && /\s$/.test(prev.text)) {
+          t = ' ' + t;
+        }
+        // 뒤에 일반 텍스트가 있으면 → 공백을 강조에 붙임 (뒷공백)
+        if (next && !next.highlight && /^\s/.test(next.text)) {
+          t = t + ' ';
+        }
+        return { ...s, text: t };
+      } else {
+        // 일반 부분: 양끝 공백 trim (강조 부분이 공백 갖고 있음)
+        return { ...s, text: s.text.trim() };
+      }
+    });
+    
+    return result.filter(s => s.text && s.text.length > 0);
   }
 
   // 한 줄 텍스트를 여러 drawtext로 그리기 (단어별 색 지원)
@@ -4004,17 +4065,21 @@ async function composeFinalVideo({
   //    대충 평균 fontSize * 0.75 사용
 
   function estimateTextWidth(text, fontSize) {
-    // 글자별 대략 너비
+    // 글자별 대략 너비 (실측 기반 조정)
     let w = 0;
     for (const ch of text) {
       if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(ch)) {
-        w += fontSize * 0.98;  // 한글 정사각형
-      } else if (/[a-zA-Z0-9]/.test(ch)) {
-        w += fontSize * 0.55;  // 영문숫자 좁음
+        w += fontSize * 0.92;  // 한글 (조정: 0.98 → 0.92)
+      } else if (/[a-zA-Z]/.test(ch)) {
+        w += fontSize * 0.50;  // 영문
+      } else if (/[0-9]/.test(ch)) {
+        w += fontSize * 0.55;  // 숫자
       } else if (/\s/.test(ch)) {
-        w += fontSize * 0.35;  // 공백
+        w += fontSize * 0.28;  // 공백 (조정: 0.35 → 0.28)
+      } else if (/[!?.,]/.test(ch)) {
+        w += fontSize * 0.30;  // 구두점
       } else {
-        w += fontSize * 0.7;
+        w += fontSize * 0.60;
       }
     }
     return w;

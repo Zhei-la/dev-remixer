@@ -163,7 +163,34 @@ class AuthClient {
   // ===== 자가 점검 (앱 시작 시) =====
   async checkAuth() {
     if (!this.accessToken) return { ok: false, error: 'no token' };
-    return this.apiCall('/api/app/check');
+    const result = await this.apiCall('/api/app/check');
+    // 🆕 서버 응답에서 최신 user 정보 받으면 this.user 갱신 (병합)
+    if (result.ok && result.data) {
+      console.log('[auth-client] 📥 서버 응답:', JSON.stringify(result.data));
+      
+      // 🔴 서버 응답 형식: { user: {...}, usage: { count, limit, remaining, unlimited, expiresAt } }
+      // user 객체와 usage 객체에서 정보 합쳐서 this.user 갱신
+      const userPart = result.data.user || {};
+      const usagePart = result.data.usage || {};
+      
+      // usage 객체의 count/limit을 user의 usage_count/usage_limit로 매핑
+      const merged = {
+        ...this.user,           // 기존 정보 유지
+        ...userPart,            // 서버의 새 user 정보로 덮어쓰기
+      };
+      
+      // 사용량 매핑 (서버는 usage.count, 클라이언트는 usage_count로 사용)
+      if (usagePart.count !== undefined) merged.usage_count = usagePart.count;
+      if (usagePart.limit !== undefined) merged.usage_limit = usagePart.limit;
+      if (usagePart.remaining !== undefined) merged.usage_remaining = usagePart.remaining;
+      if (usagePart.unlimited !== undefined) merged.unlimited = usagePart.unlimited;
+      if (usagePart.expiresAt !== undefined) merged.expires_at = usagePart.expiresAt;
+      
+      this.user = merged;
+      this.saveAuth();
+      console.log('[auth-client] ✅ user 갱신:', this.user.username, 'usage:', this.user.usage_count, '/', this.user.usage_limit);
+    }
+    return result;
   }
 
   // ===== 작업 시작 전 검증 (매번 호출) =====
@@ -171,13 +198,28 @@ class AuthClient {
     if (!this.accessToken) {
       return { ok: false, error: '로그인이 필요합니다' };
     }
-    return this.apiCall('/api/app/verify-job', {
+    const result = await this.apiCall('/api/app/verify-job', {
       method: 'POST',
       data: {
         jobType,
         deviceFingerprint: this.deviceFingerprint,
       },
     });
+    // 🆕 서버가 user + usage 정보 보내면 갱신
+    if (result.ok && result.data) {
+      console.log('[auth-client] 📥 verifyJob 응답:', JSON.stringify(result.data));
+      const userPart = result.data.user || {};
+      const usagePart = result.data.usage || {};
+      const merged = { ...this.user, ...userPart };
+      if (usagePart.count !== undefined) merged.usage_count = usagePart.count;
+      if (usagePart.limit !== undefined) merged.usage_limit = usagePart.limit;
+      if (usagePart.remaining !== undefined) merged.usage_remaining = usagePart.remaining;
+      if (usagePart.unlimited !== undefined) merged.unlimited = usagePart.unlimited;
+      this.user = merged;
+      this.saveAuth();
+      console.log('[auth-client] ✅ verifyJob user 갱신:', this.user.username, 'usage:', this.user.usage_count, '/', this.user.usage_limit);
+    }
+    return result;
   }
 
   // ===== 작업 실패 시 횟수 환불 =====
@@ -187,7 +229,7 @@ class AuthClient {
       return { ok: false };
     }
     try {
-      return await this.apiCall('/api/app/refund-job', {
+      const result = await this.apiCall('/api/app/refund-job', {
         method: 'POST',
         data: {
           jobType,
@@ -195,6 +237,14 @@ class AuthClient {
           deviceFingerprint: this.deviceFingerprint,
         },
       });
+      // 🆕 서버가 환불 후 newCount 보내면 갱신
+      if (result.ok && result.data) {
+        if (result.data.newCount !== undefined) {
+          this.user = { ...this.user, usage_count: result.data.newCount };
+          this.saveAuth();
+        }
+      }
+      return result;
     } catch (e) {
       // 서버에 환불 엔드포인트 없어도 실패해선 안 됨
       console.warn('[refund] 환불 실패 (서버 미지원 가능):', e.message);

@@ -1,7 +1,7 @@
 {
   "name": "shorts-remixer",
-  "version": "3.0.3",
-  "description": "쇼츠 리믹서 - 자동 영상 다운로드 + 더빙/자막 자동 생성",
+  "version": "3.0.4",
+  "description": "? 츠 리 ???- ? 동 ? 상 ? 운로드 + ? 빙/? 막 ? 동 ? 성",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -9,7 +9,7 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win --x64",
     "build:portable": "electron-builder --win portable --x64",
-    "build:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-3.0.3.exe",
+    "build:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-3.0.4.exe",
     "build:trial": "cross-env BUILD_MODE=trial electron-builder --win --x64 -c.extraMetadata.buildMode=trial -c.productName=ShortsRemixer-Trial -c.artifactName=ShortsRemixer-Trial-Setup-${version}.${ext}",
     "publish": "electron-builder --win --x64 --publish always",
     "publish:full": "cross-env BUILD_MODE=full electron-builder --win --x64 -c.extraMetadata.buildMode=full -c.productName=ShortsRemixer -c.artifactName=ShortsRemixer-Setup-${version}.${ext} --publish always"
@@ -63,7 +63,7 @@
       {
         "provider": "github",
         "owner": "Zhei-la",
-        "repo": "shorts-remixer-releases",
+        "repo": "shorts-remixer-download",
         "releaseType": "release"
       }
     ],

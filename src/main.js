@@ -1169,7 +1169,13 @@ ipcMain.handle('auth-get-user', () => authClient.getUser());
 // 🆕 서버에서 사용자 정보 다시 받아오기 (등급 변경 후 반영용)
 ipcMain.handle('auth-refresh-user', async () => {
   try {
-    // authClient에 verify 또는 sync 메서드 있으면 호출
+    // 🔴 가장 확실한 방법: checkAuth 호출 → 서버에 토큰 검증 + 최신 user 정보 받음
+    const checkResult = await authClient.checkAuth();
+    if (checkResult && checkResult.ok) {
+      console.log('[auth-refresh-user] ✅ 서버 재조회 성공:', authClient.user?.username);
+      return { success: true, user: authClient.getUser() };
+    }
+    // 폴백: 다른 메서드들
     if (typeof authClient.verifyToken === 'function') {
       await authClient.verifyToken();
     } else if (typeof authClient.refreshUser === 'function') {
@@ -1502,10 +1508,19 @@ ipcMain.handle('analyze-and-generate-script', async (event, params) => {
   
   try {
     const savedConfig = loadConfig();
+    console.log('[analyze-and-generate-script] 🔍 시작');
+    console.log('  - groqApiKey:', savedConfig.groqApiKey ? `있음(${savedConfig.groqApiKey.length}자)` : '❌ 없음');
+    console.log('  - openaiApiKey:', savedConfig.openaiApiKey ? `있음(${savedConfig.openaiApiKey.length}자)` : '❌ 없음');
+    console.log('  - llmProvider:', savedConfig.llmProvider);
+    console.log('  - videoUrl:', videoUrl ? videoUrl.substring(0, 80) : '없음');
+    console.log('  - usingImagesOnly:', usingImagesOnly);
+    
     const apiKey = savedConfig.groqApiKey || savedConfig.openaiApiKey;
     if (!apiKey) {
+      console.error('[analyze-and-generate-script] ❌ API 키 둘 다 없음');
       return { success: false, error: 'API 키가 설정되지 않았습니다.' };
     }
+    console.log('[analyze-and-generate-script] ✅ API 키 OK');
     
     // 🆕 이미지만 있으면 videoUrl이 빈 문자열이어도 OK
     if (!usingImagesOnly && (!videoUrl || !videoUrl.trim())) {
@@ -2433,10 +2448,15 @@ ${retryReason}
 ipcMain.handle('generate-product-script', async (event, params) => {
   try {
     const savedConfig = loadConfig();
+    console.log('[generate-product-script] 🔍 시작');
+    console.log('  - groqApiKey:', savedConfig.groqApiKey ? `있음(${savedConfig.groqApiKey.length}자)` : '❌ 없음');
+    console.log('  - openaiApiKey:', savedConfig.openaiApiKey ? `있음(${savedConfig.openaiApiKey.length}자)` : '❌ 없음');
     const apiKey = savedConfig.groqApiKey || savedConfig.openaiApiKey;
     if (!apiKey) {
+      console.error('[generate-product-script] ❌ API 키 둘 다 없음');
       return { success: false, error: 'API 키가 설정되지 않았습니다. 설정에서 Groq 또는 OpenAI API 키를 입력하세요.' };
     }
+    console.log('[generate-product-script] ✅ API 키 OK');
     
     const { productInfo, hookText, outroText, speechStyle, scriptLength, videoTranscript, videoDurationSec, targetDurationSec } = params;
     

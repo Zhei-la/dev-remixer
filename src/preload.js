@@ -2,6 +2,17 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  // 🆕 빌드된 앱의 resources 경로 반환 (폰트 미리보기용)
+  getResourcesPath: () => {
+    try {
+      // 빌드된 앱: process.resourcesPath
+      // 개발 모드: 빈 문자열 (정적 @font-face가 있을 수도)
+      return process.resourcesPath || '';
+    } catch (e) {
+      return '';
+    }
+  },
+  
   // 설정
   loadConfig: () => ipcRenderer.invoke('load-config'),
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
@@ -99,6 +110,7 @@ contextBridge.exposeInMainWorld('api', {
   authLogout: () => ipcRenderer.invoke('auth-logout'),
   authGetUser: () => ipcRenderer.invoke('auth-get-user'),
   authCheck: () => ipcRenderer.invoke('auth-check'),
+  authRefreshUser: () => ipcRenderer.invoke('auth-refresh-user'),
   authDeviceFingerprint: () => ipcRenderer.invoke('auth-device-fingerprint'),
   authTrial: () => ipcRenderer.invoke('auth-trial'),
   

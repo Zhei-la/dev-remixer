@@ -6,7 +6,8 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Pretendard:wght@400;500;600;700;800&display=swap');
 
-  /* 🆕 카페24 무료 폰트 (앱에 번들됨) - Electron file:// 경로 */
+  /* 🆕 카페24 폰트 - 개발 모드용 (npm start에서 작동) */
+  /* 빌드된 앱에서는 JavaScript에서 절대경로로 다시 로드됨 */
   @font-face { font-family: "Cafe24 Danjunghae"; src: local("Cafe24 Danjunghae"), url("../fonts/Cafe24Danjunghae-v2.0.ttf"); }
   @font-face { font-family: "Cafe24 Dongdong"; src: local("Cafe24 Dongdong"), url("../fonts/Cafe24DongdongRegular.ttf"); }
   @font-face { font-family: "Cafe24 Dongdong Light"; src: local("Cafe24 Dongdong Light"), url("../fonts/Cafe24DongdongLight.ttf"); }
@@ -18,10 +19,25 @@
   @font-face { font-family: "Cafe24 Ssurround"; src: local("Cafe24 Ssurround"), url("../fonts/Cafe24Ssurround-v2.0.ttf"); }
   @font-face { font-family: "Cafe24 Supermagic"; src: local("Cafe24 Supermagic"), url("../fonts/Cafe24Supermagic-Bold-v1.0.ttf"); }
   @font-face { font-family: "Cafe24 Supermagic Regular"; src: local("Cafe24 Supermagic Regular"), url("../fonts/Cafe24Supermagic-Regular-v1.0.ttf"); }
-  @font-face { font-family: "Cafe24 Angbanana"; src: local("Cafe24 Angbanana"), url("../fonts/Cafe24Angbanana.ttf"); }
-  @font-face { font-family: "Cafe24 Behappy"; src: local("Cafe24 Behappy"), url("../fonts/Cafe24Behappy.ttf"); }
-  @font-face { font-family: "Cafe24 Decobox"; src: local("Cafe24 Decobox"), url("../fonts/Cafe24Decobox.ttf"); }
-  @font-face { font-family: "Cafe24 PROSlimFit"; src: local("Cafe24 PROSlimFit"), url("../fonts/Cafe24PROSlimFit.ttf"); }
+  
+  /* 🔴 textarea는 항상 입력 가능하도록 강제 (잠김 버그 방지) */
+  textarea {
+    pointer-events: auto !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+  textarea:disabled, textarea[readonly] {
+    /* 진짜 disabled여도 시각적으로만 회색, 입력은 가능하게 */
+    pointer-events: auto !important;
+    cursor: text !important;
+  }
+  
+  /* 🔴 로딩 오버레이는 .visible 클래스 있을 때만 보임 */
+  #scriptLoadingOverlayStep4:not(.visible),
+  #talkingScriptLoading:not(.visible),
+  #scriptLoadingOverlay:not(.visible) {
+    display: none !important;
+  }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -411,6 +427,22 @@
   }
 
   .sidebar-section:last-child { border-bottom: none; }
+  
+  /* 🔴 파일 결과 영역은 전체 높이 차지 + 넘치면 스크롤 */
+  .right-sidebar > .sidebar-section:only-child,
+  .right-sidebar > .sidebar-section.full-height {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .right-sidebar > .sidebar-section.full-height .file-list {
+    flex: 1 1 auto;
+    max-height: none !important;
+    overflow-y: auto;
+    min-height: 0;
+  }
 
   .sidebar-title {
     font-size: 11px;
@@ -3102,10 +3134,14 @@
           <div class="form-row">
             <label>LLM Provider</label>
             <select class="input" id="llmProvider">
-              <option value="groq">Groq · Llama 3.3 70B (무료, 빠름) ⭐</option>
-              <option value="openai">OpenAI · GPT-4o-mini (유료)</option>
+              <option value="auto">🤖 자동 (입력한 키 중 우선순위로) ⭐ 권장</option>
+              <option value="openai">OpenAI · GPT-4o-mini (유료, 정확함)</option>
+              <option value="groq">Groq · Llama 3.3 70B (무료, 빠름)</option>
               <option value="gemini">Google · Gemini 2.0 Flash (무료 한도 큼)</option>
             </select>
+            <div class="hint" style="margin-top:6px; font-size:11px; color:var(--text-dim);">
+              💡 <b>자동</b>: OpenAI > Anthropic > Groq > Gemini 순서로 사용
+            </div>
           </div>
           <div class="form-row">
             <label>모델명 직접 지정 (선택)</label>
@@ -3884,8 +3920,8 @@
 
   <!-- ========== 우측: 사이드바 ========== -->
   <aside class="right-sidebar">
-    <!-- 📁 파일 결과 (맨 위) -->
-    <div class="sidebar-section">
+    <!-- 📁 파일 결과 (전체 영역 차지) -->
+    <div class="sidebar-section full-height">
       <div class="sidebar-title">📁 파일 결과</div>
       <div class="file-list" id="fileList">
         <div class="empty-state">
@@ -4688,18 +4724,39 @@
   
   // 🆕 더빙 옵션 미리듣기 버튼 핸들러
   document.addEventListener('DOMContentLoaded', () => {
-    // 🔴 전역: 모든 input/textarea 클릭/포커스 시 즉시 활성화 (잠김 방지)
-    const unlockInput = (e) => {
-      const el = e.target;
-      if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT')) return;
-      if (el.disabled) el.disabled = false;
-      if (el.readOnly) el.readOnly = false;
-      el.style.pointerEvents = 'auto';
-      el.style.userSelect = 'text';
-    };
-    document.addEventListener('mousedown', unlockInput, true);
-    document.addEventListener('focus', unlockInput, true);
-    document.addEventListener('click', unlockInput, true);
+    // 🔴 빌드된 앱에서 카페24 폰트 동적 로드 (file:// 절대 경로)
+    try {
+      const resourcesPath = window.api?.getResourcesPath?.() || '';
+      if (resourcesPath) {
+        const fontList = [
+          { name: 'Cafe24 Danjunghae', file: 'Cafe24Danjunghae-v2.0.ttf' },
+          { name: 'Cafe24 Dongdong', file: 'Cafe24DongdongRegular.ttf' },
+          { name: 'Cafe24 Dongdong Light', file: 'Cafe24DongdongLight.ttf' },
+          { name: 'Cafe24 Moyamoya', file: 'Cafe24Moyamoya-Face-v1.0.ttf' },
+          { name: 'Cafe24 Ohsquare', file: 'Cafe24Ohsquare-v2.0.ttf' },
+          { name: 'Cafe24 Ohsquare Air', file: 'Cafe24OhsquareAir-v2.0.ttf' },
+          { name: 'Cafe24 Oneprettynight', file: 'Cafe24Oneprettynight-v2.0.ttf' },
+          { name: 'Cafe24 Simplehae', file: 'Cafe24Simplehae-v2.0.ttf' },
+          { name: 'Cafe24 Ssurround', file: 'Cafe24Ssurround-v2.0.ttf' },
+          { name: 'Cafe24 Supermagic', file: 'Cafe24Supermagic-Bold-v1.0.ttf' },
+          { name: 'Cafe24 Supermagic Regular', file: 'Cafe24Supermagic-Regular-v1.0.ttf' },
+        ];
+        // 윈도우 백슬래시 → 슬래시
+        const basePath = resourcesPath.replace(/\\/g, '/');
+        const styleEl = document.createElement('style');
+        styleEl.id = 'dynamic-fonts';
+        let css = '';
+        for (const f of fontList) {
+          // file:// 절대 경로로 로드
+          css += `@font-face { font-family: "${f.name}"; src: local("${f.name}"), url("file:///${basePath}/fonts/${f.file}"); }\n`;
+        }
+        styleEl.textContent = css;
+        document.head.appendChild(styleEl);
+        console.log('[폰트] ✅ 동적 로드 완료:', fontList.length, '개');
+      }
+    } catch (e) {
+      console.warn('[폰트] 동적 로드 실패:', e);
+    }
     
     // Edge TTS 미리듣기
     const previewEdgeBtn = document.getElementById('previewEdgeVoiceBtn');
@@ -5579,16 +5636,47 @@
   const copyProductScriptBtn = document.getElementById('copyProductScriptBtn');
   const generatedScriptEditStep4 = document.getElementById('generatedScriptEditStep4');
   if (copyProductScriptBtn) {
-    copyProductScriptBtn.addEventListener('click', () => {
+    // 🔴 강제 활성화
+    copyProductScriptBtn.disabled = false;
+    copyProductScriptBtn.style.pointerEvents = 'auto';
+    copyProductScriptBtn.style.cursor = 'pointer';
+    
+    copyProductScriptBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[복사 버튼] 클릭됨');
       const script = generatedScriptEditStep4?.value || '';
+      console.log('[복사 버튼] 대본 길이:', script.length);
       if (!script.trim()) {
         alert('복사할 대본이 없습니다.');
         return;
       }
-      navigator.clipboard.writeText(script).then(() => {
+      try {
+        // 1차 시도: clipboard API
+        await navigator.clipboard.writeText(script);
         copyProductScriptBtn.textContent = '✅ 복사됨!';
-        setTimeout(() => { copyProductScriptBtn.textContent = '📋 복사'; }, 1500);
-      });
+        console.log('[복사 버튼] ✅ 클립보드 복사 성공');
+      } catch (err) {
+        console.warn('[복사 버튼] clipboard API 실패, fallback 시도:', err);
+        // 2차 시도: textarea 선택 → execCommand
+        try {
+          generatedScriptEditStep4.select();
+          document.execCommand('copy');
+          copyProductScriptBtn.textContent = '✅ 복사됨!';
+          console.log('[복사 버튼] ✅ execCommand 복사 성공');
+        } catch (err2) {
+          console.error('[복사 버튼] ❌ 복사 실패:', err2);
+          // 3차 시도: IPC로 main process에 위임
+          if (window.api?.copyToClipboard) {
+            await window.api.copyToClipboard(script);
+            copyProductScriptBtn.textContent = '✅ 복사됨!';
+            console.log('[복사 버튼] ✅ IPC 복사 성공');
+          } else {
+            copyProductScriptBtn.textContent = '❌ 실패';
+          }
+        }
+      }
+      setTimeout(() => { copyProductScriptBtn.textContent = '📋 복사'; }, 1500);
     });
   }
 
@@ -6146,6 +6234,8 @@
     // 🆕 Step4 스피너도 동시 제어 (어느 화면에서 호출되든 보이게)
     if (scriptLoadingOverlayStep4) {
       scriptLoadingOverlayStep4.style.display = show ? 'block' : 'none';
+      if (show) scriptLoadingOverlayStep4.classList.add('visible');
+      else scriptLoadingOverlayStep4.classList.remove('visible');
     }
     if (scriptLoadingTextStep4 && message) {
       scriptLoadingTextStep4.textContent = message;
@@ -8289,7 +8379,7 @@
     if (document.getElementById('geminiKey')) document.getElementById('geminiKey').value = currentConfig.geminiApiKey || '';
     document.getElementById('elevenLabsKey').value = currentConfig.elevenLabsApiKey || '';
     if (document.getElementById('typecastApiKey')) document.getElementById('typecastApiKey').value = currentConfig.typecastApiKey || '';
-    document.getElementById('llmProvider').value = currentConfig.llmProvider || 'groq';
+    document.getElementById('llmProvider').value = currentConfig.llmProvider || 'auto';
     document.getElementById('llmModel').value = currentConfig.llmModel || '';
     document.getElementById('coupangAccessKey').value = currentConfig.coupangAccessKey || '';
     document.getElementById('coupangSecretKey').value = currentConfig.coupangSecretKey || '';
@@ -9065,6 +9155,10 @@
       if (res.success) {
         log(`✓ 완료: ${res.result.outputPath}`, 'ok');
         completeJob(jobId, res.result);
+        // 🆕 영상 생성 완료 → 사용 횟수 자동 갱신 (서버 재조회)
+        if (window.__refreshUserInfo) {
+          try { await window.__refreshUserInfo(true); } catch (e) {}
+        }
         if (res.result.coupangLink) {
           await window.api.copyToClipboard(res.result.coupangLink);
           log(`✓ 쿠팡 링크 클립보드 복사됨`, 'ok');
@@ -9142,6 +9236,10 @@
       if (res.success) {
         log(`✓ 완료: ${res.result.outputPath}`, 'ok');
         completeJob(jobId, res.result);
+        // 🆕 영상 생성 완료 → 사용 횟수 자동 갱신 (서버 재조회)
+        if (window.__refreshUserInfo) {
+          try { await window.__refreshUserInfo(true); } catch (e) {}
+        }
         if (res.result.coupangLink) {
           await window.api.copyToClipboard(res.result.coupangLink);
           log(`✓ 쿠팡 링크 클립보드 복사됨`, 'ok');
@@ -10049,21 +10147,21 @@
   })();
 
   // 🆕 사용자 등급 새로고침 (관리자가 등급 바꾼 후 즉시 반영)
-  document.getElementById('refreshUserBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('refreshUserBtn');
-    const originalText = btn.textContent;
-    btn.textContent = '⏳';
-    btn.disabled = true;
+  // 🆕 사용자 정보 + 사용 횟수 모두 갱신 (사이드바 + 헤더)
+  // 영상 생성 완료마다 + 새로고침 버튼 누를 때 호출
+  window.__refreshUserInfo = async (forceServerRefresh = false) => {
     try {
-      // authClient에서 서버 재조회
-      if (window.api.authRefreshUser) {
+      // 서버에서 최신 데이터 가져오기 (옵션)
+      if (forceServerRefresh && window.api.authRefreshUser) {
         await window.api.authRefreshUser();
       }
-      // 사용자 정보 다시 받아서 화면 갱신
+      
       const user = window.api.authGetUser ? await window.api.authGetUser() : null;
-      if (user) {
-        // 등급 표시 갱신 (위 IIFE와 동일 로직)
-        const roleEl = document.getElementById('loggedRole');
+      if (!user) return false;
+      
+      // 등급 표시 갱신
+      const roleEl = document.getElementById('loggedRole');
+      if (roleEl) {
         if (user.role === 'admin') {
           roleEl.textContent = '👑 관리자';
           roleEl.style.color = '#dc2626';
@@ -10072,8 +10170,8 @@
           const tierDisplay = {
             admin: { text: '👑 관리자 (무제한)', color: '#dc2626' },
             unlimited: { text: '♾️ 무제한 사용자', color: '#dc2626' },
-              lifetime: { text: '🔥 평생권 사용자', color: '#dc2626' },
-              monthly: { text: '📅 월정액 사용자', color: '#0891b2' },
+            lifetime: { text: '🔥 평생권 사용자', color: '#dc2626' },
+            monthly: { text: '📅 월정액 사용자', color: '#0891b2' },
             pro: { text: '💎 프로 사용자', color: '#7c3aed' },
             basic: { text: '⭐ 베이직 사용자', color: '#2563eb' },
             trial: { text: '🎁 체험판 사용자', color: '#f59e0b' },
@@ -10081,86 +10179,99 @@
           roleEl.textContent = tierDisplay.text;
           roleEl.style.color = tierDisplay.color;
         }
-        // 체험판 박스 / 일일 사용량 박스 / 무제한 박스 토글
-        const trialBox = document.getElementById('trialStatusBox');
-        const dailyBox = document.getElementById('dailyUsageBox');
-        const unlimitedBox = document.getElementById('unlimitedStatusBox');
-        if (trialBox) trialBox.style.display = 'none';
-        if (dailyBox) dailyBox.style.display = 'none';
-        if (unlimitedBox) unlimitedBox.style.display = 'none';
-
-        const isTrial = tier === 'trial' || !user.tier;
-        const banner = document.getElementById('trialBanner');
-        if (banner) {
-          banner.style.display = isTrial ? 'block' : 'none';
-          document.body.classList.toggle('has-banner', isTrial);
-        }
-
-        if (isTrial) {
-          if (trialBox) trialBox.style.display = 'block';
-          const usageCount = user.usage_count || 0;
-          const usageLimit = Math.abs(user.usage_limit) || 5;
-          document.getElementById('trialUsageDisplay').textContent = `${usageCount} / ${usageLimit}회`;
-        } else if (tier === 'basic' || tier === 'pro' || tier === 'monthly') {
-          if (dailyBox) {
-            dailyBox.style.display = 'block';
-            const isProTier = tier === 'pro';
-            const isMonthly = tier === 'monthly';
-
-            if (isMonthly) {
-              dailyBox.style.background = 'rgba(8,145,178,0.1)';
-              dailyBox.style.border = '1px solid rgba(8,145,178,0.3)';
-              document.getElementById('dailyUsageLabel').textContent = '📅 월정액 사용자';
-              document.getElementById('dailyUsageLabel').style.color = '#0891b2';
-              document.getElementById('dailyUsageDisplay').textContent = '월간 무제한';
-              document.getElementById('dailyUsageDisplay').style.color = '#06b6d4';
-              if (user.expires_at) {
-                const expDate = new Date(user.expires_at);
-                const remainDays = Math.max(0, Math.ceil((expDate - Date.now()) / 86400000));
-                document.getElementById('planExpiryDisplay').textContent = `📅 ${remainDays}일 남음`;
-                document.getElementById('planExpiryDisplay').style.color = '#06b6d4';
-              } else {
-                document.getElementById('planExpiryDisplay').textContent = '';
-              }
-            } else {
-              const dailyUsed = user.daily_used || 0;
-              const dailyLimit = user.daily_limit || (isProTier ? 50 : 20);
-              const color = isProTier ? '#7c3aed' : '#2563eb';
-              const lightColor = isProTier ? '#8b5cf6' : '#3b82f6';
-              const bgColor = isProTier ? 'rgba(124,58,237,0.1)' : 'rgba(37,99,235,0.1)';
-              const borderColor = isProTier ? 'rgba(124,58,237,0.3)' : 'rgba(37,99,235,0.3)';
-
-              dailyBox.style.background = bgColor;
-              dailyBox.style.border = `1px solid ${borderColor}`;
-              document.getElementById('dailyUsageLabel').textContent = isProTier ? '💎 프로 (하루 50개)' : '⭐ 베이직 (하루 20개)';
-              document.getElementById('dailyUsageLabel').style.color = color;
-              document.getElementById('dailyUsageDisplay').textContent = `오늘 ${dailyUsed} / ${dailyLimit}회`;
-              document.getElementById('dailyUsageDisplay').style.color = lightColor;
-              if (user.expires_at) {
-                const expDate = new Date(user.expires_at);
-                const remainDays = Math.max(0, Math.ceil((expDate - Date.now()) / 86400000));
-                document.getElementById('planExpiryDisplay').textContent = `📅 ${remainDays}일 남음`;
-                document.getElementById('planExpiryDisplay').style.color = lightColor;
-              } else {
-                document.getElementById('planExpiryDisplay').textContent = '';
-              }
-            }
-          }
-        } else if (tier === 'unlimited' || tier === 'lifetime' || tier === 'admin') {
-          if (unlimitedBox) {
-            unlimitedBox.style.display = 'block';
-            const isAdmin = tier === 'admin' || user.role === 'admin';
-            document.getElementById('unlimitedLabel').textContent = isAdmin ? '👑 관리자' : '🔥 얼리버드 (평생)';
-            document.getElementById('unlimitedDetail').textContent = isAdmin ? '제한 없이 사용 가능' : '무제한 사용 · 평생 보장';
-          }
-        }
-        // 성공 표시
-        btn.textContent = '✅';
-        setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 1500);
-      } else {
-        btn.textContent = '❌';
-        setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 1500);
       }
+      
+      // 박스 토글
+      const trialBox = document.getElementById('trialStatusBox');
+      const dailyBox = document.getElementById('dailyUsageBox');
+      const unlimitedBox = document.getElementById('unlimitedStatusBox');
+      if (trialBox) trialBox.style.display = 'none';
+      if (dailyBox) dailyBox.style.display = 'none';
+      if (unlimitedBox) unlimitedBox.style.display = 'none';
+      
+      const tier = user.tier || 'trial';
+      const isTrial = tier === 'trial' || !user.tier;
+      const banner = document.getElementById('trialBanner');
+      if (banner) {
+        banner.style.display = isTrial ? 'block' : 'none';
+        document.body.classList.toggle('has-banner', isTrial);
+      }
+      
+      // 체험판
+      if (isTrial) {
+        if (trialBox) trialBox.style.display = 'block';
+        const usageCount = user.usage_count || 0;
+        const usageLimit = Math.abs(user.usage_limit) || 5;
+        const trialDisplay = document.getElementById('trialUsageDisplay');
+        if (trialDisplay) trialDisplay.textContent = `${usageCount} / ${usageLimit}회`;
+        // 헤더 배너
+        const bannerText = document.getElementById('trialBannerText');
+        if (bannerText) {
+          bannerText.textContent = `🎁 체험판 사용 중 · ${usageCount} / ${usageLimit}회 사용`;
+        }
+      }
+      // 베이직/프로/월정액
+      else if (tier === 'basic' || tier === 'pro' || tier === 'monthly') {
+        if (dailyBox) {
+          dailyBox.style.display = 'block';
+          const isProTier = tier === 'pro';
+          const isMonthly = tier === 'monthly';
+          if (isMonthly) {
+            dailyBox.style.background = 'rgba(8,145,178,0.1)';
+            dailyBox.style.border = '1px solid rgba(8,145,178,0.3)';
+            const lbl = document.getElementById('dailyUsageLabel');
+            const dsp = document.getElementById('dailyUsageDisplay');
+            if (lbl) { lbl.textContent = '📅 월정액 사용자'; lbl.style.color = '#0891b2'; }
+            if (dsp) { dsp.textContent = '월간 무제한'; dsp.style.color = '#06b6d4'; }
+          } else {
+            const dailyUsed = user.daily_used || 0;
+            const dailyLimit = user.daily_limit || (isProTier ? 50 : 20);
+            const color = isProTier ? '#7c3aed' : '#2563eb';
+            const lightColor = isProTier ? '#8b5cf6' : '#3b82f6';
+            const bgColor = isProTier ? 'rgba(124,58,237,0.1)' : 'rgba(37,99,235,0.1)';
+            const borderColor = isProTier ? 'rgba(124,58,237,0.3)' : 'rgba(37,99,235,0.3)';
+            dailyBox.style.background = bgColor;
+            dailyBox.style.border = `1px solid ${borderColor}`;
+            const lbl = document.getElementById('dailyUsageLabel');
+            const dsp = document.getElementById('dailyUsageDisplay');
+            if (lbl) { lbl.textContent = isProTier ? '💎 프로 (하루 50개)' : '⭐ 베이직 (하루 20개)'; lbl.style.color = color; }
+            if (dsp) { dsp.textContent = `오늘 ${dailyUsed} / ${dailyLimit}회`; dsp.style.color = lightColor; }
+          }
+          if (user.expires_at) {
+            const expDate = new Date(user.expires_at);
+            const remainDays = Math.max(0, Math.ceil((expDate - Date.now()) / 86400000));
+            const exp = document.getElementById('planExpiryDisplay');
+            if (exp) exp.textContent = `📅 ${remainDays}일 남음`;
+          }
+        }
+      }
+      // 무제한/평생/관리자
+      else if (tier === 'unlimited' || tier === 'lifetime' || tier === 'admin') {
+        if (unlimitedBox) {
+          unlimitedBox.style.display = 'block';
+          const isAdmin = tier === 'admin' || user.role === 'admin';
+          const lbl = document.getElementById('unlimitedLabel');
+          const dtl = document.getElementById('unlimitedDetail');
+          if (lbl) lbl.textContent = isAdmin ? '👑 관리자' : '🔥 얼리버드 (평생)';
+          if (dtl) dtl.textContent = isAdmin ? '제한 없이 사용 가능' : '무제한 사용 · 평생 보장';
+        }
+      }
+      return true;
+    } catch (e) {
+      console.warn('[refreshUserInfo] 실패:', e);
+      return false;
+    }
+  };
+  
+  document.getElementById('refreshUserBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('refreshUserBtn');
+    const originalText = btn.textContent;
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    try {
+      const ok = await window.__refreshUserInfo(true);  // 서버 재조회
+      btn.textContent = ok ? '✅' : '❌';
+      setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 1500);
     } catch (e) {
       console.warn('[refresh user] 실패:', e);
       btn.textContent = '❌';
