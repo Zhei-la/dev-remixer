@@ -28,14 +28,7 @@ const LANGUAGES = {
 const VOICE_CATALOG = {
   ko: [
     { id: 'ko-KR-SunHiNeural',  name: '선희',    gender: 'F', style: '청년, 밝음', recommend: true },
-    { id: 'ko-KR-JiMinNeural',  name: '지민',    gender: 'F', style: '청년, 친근' },
-    { id: 'ko-KR-SeoHyeonNeural', name: '서현',   gender: 'F', style: '성인, 차분' },
-    { id: 'ko-KR-YuJinNeural',  name: '유진',    gender: 'F', style: '청년, 발랄' },
-    { id: 'ko-KR-SoonBokNeural', name: '순복',   gender: 'F', style: '노년, 따뜻' },
-    { id: 'ko-KR-InJoonNeural', name: '인준',    gender: 'M', style: '청년, 깔끔' },
-    { id: 'ko-KR-HyunsuNeural', name: '현수',    gender: 'M', style: '청년, 부드러움' },
-    { id: 'ko-KR-BongJinNeural', name: '봉진',   gender: 'M', style: '중년, 안정' },
-    { id: 'ko-KR-GookMinNeural', name: '국민',   gender: 'M', style: '성인, 신뢰' },
+    { id: 'ko-KR-InJoonNeural', name: '인준',    gender: 'M', style: '청년, 깔끔', recommend: true },
   ],
   en: [
     { id: 'en-US-AriaNeural',       name: 'Aria',     gender: 'F', style: 'News, professional', recommend: true },
@@ -1815,8 +1808,10 @@ async function generateAdCopy(originalText, videoDurationSec, targetLang, config
 
 **영상 정보:**
 - 영상 길이: ${videoDurationSec.toFixed(1)}초
-- 🔴 **목표 카피 길이: ${minChars}~${targetChars}자**
-- 🔴 **최대 ${maxChars}자 절대 초과 금지!**
+- 🔴🔴🔴 **카피 글자 수 한도: 정확히 ${maxChars}자 이하!**
+- 🔴 목표: ${minChars}~${targetChars}자
+- ⛔ **${maxChars}자 초과 시 영상보다 길어져서 잘림!** 절대 초과하지 마세요!
+- ⚠️ **글자 수 셀 때 공백 포함, 줄바꿈 제외**
 
 **원본 스크립트 (참고만):**
 ${originalText}
@@ -2767,6 +2762,8 @@ async function generateElevenLabsTTS(text, voiceId, outputPath, apiKey, onProgre
   onProgress('tts', 65, `ElevenLabs 음성 생성 중...`);
   
   try {
+    console.log(`[ElevenLabs] API 호출: voice_id=${voiceId}, text="${text.substring(0, 30)}..."`);
+    
     const response = await axios.post(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
@@ -2791,12 +2788,49 @@ async function generateElevenLabsTTS(text, voiceId, outputPath, apiKey, onProgre
       }
     );
     
-    fs.writeFileSync(outputPath, Buffer.from(response.data));
-    console.log(`[ElevenLabs] TTS 생성 완료: ${outputPath}`);
+    // 🔧 응답 검증 - 진짜 mp3인지 확인
+    const buffer = Buffer.from(response.data);
+    const fileSize = buffer.length;
+    
+    const contentType = response.headers['content-type'] || '';
+    console.log(`[ElevenLabs] 응답 status=${response.status}, content-type=${contentType}, size=${fileSize} bytes`);
+    
+    // mp3 파일 시그니처 체크
+    const isMp3 = (
+      (buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) ||  // ID3
+      (buffer[0] === 0xFF && (buffer[1] === 0xFB || buffer[1] === 0xF3 || buffer[1] === 0xF2))  // MPEG sync
+    );
+    
+    // JSON 응답이면 (에러)
+    if (contentType.includes('json') || (buffer[0] === 0x7B && buffer[1] === 0x22)) {
+      const jsonText = buffer.toString('utf8');
+      console.error('[ElevenLabs] ❌ JSON 응답 받음 (mp3 아님):', jsonText);
+      throw new Error('ElevenLabs가 mp3 대신 JSON 응답: ' + jsonText.substring(0, 200));
+    }
+    
+    if (!isMp3) {
+      console.error('[ElevenLabs] ⚠️ mp3 파일이 아닐 수 있음! 첫 4바이트:', buffer.slice(0, 4).toString('hex'));
+    } else {
+      console.log('[ElevenLabs] ✅ 정상 mp3 응답');
+    }
+    
+    fs.writeFileSync(outputPath, buffer);
+    console.log(`[ElevenLabs] TTS 생성 완료: ${outputPath} (${fileSize} bytes)`);
     return outputPath;
   } catch (error) {
-    console.error('[ElevenLabs] TTS 오류:', error.response?.data || error.message);
-    throw new Error('ElevenLabs TTS 실패: ' + (error.response?.status === 401 ? 'API 키 오류' : error.message));
+    const errMsg = error.response?.data 
+      ? (Buffer.isBuffer(error.response.data) ? error.response.data.toString() : JSON.stringify(error.response.data))
+      : error.message;
+    console.error('[ElevenLabs] TTS 오류 - status:', error.response?.status, 'msg:', errMsg);
+    
+    let userMsg = 'ElevenLabs TTS 실패: ';
+    if (error.response?.status === 401) userMsg += 'API 키 오류 (설정에서 확인)';
+    else if (error.response?.status === 403) userMsg += '권한 없음 또는 사용량 초과';
+    else if (error.response?.status === 422) userMsg += 'Voice ID 오류 (' + voiceId + ')';
+    else if (error.response?.status === 429) userMsg += '호출 한도 초과 (잠시 후 다시 시도)';
+    else userMsg += errMsg;
+    
+    throw new Error(userMsg);
   }
 }
 
@@ -4709,9 +4743,10 @@ function parseVisionResponse(text) {
 
 function generateCoupangLink(keyword, partnerCode) {
   const encoded = encodeURIComponent(keyword);
-  // 🔧 가짜 단축 링크 만들지 말고 진짜 쿠팡 검색 페이지 URL 사용
-  // partnerCode는 deeplink API로 추후 변환 시 사용 (여기서는 단순 검색 링크만)
-  return `https://www.coupang.com/np/search?q=${encoded}&channel=user`;
+  // 🔧 검색 페이지 URL + 관리자 추천 ID(AF5722914) 추가
+  // 정책: 작업기록 "제품 보러가기"는 무조건 관리자 ID로 추적
+  // (사용자가 만든 영상이라도 앱 내 "보러가기"는 관리자 수익으로)
+  return `https://www.coupang.com/np/search?q=${encoded}&channel=user&lptag=AF5722914`;
 }
 
 async function extractKeyword(text, config) {
@@ -5113,10 +5148,13 @@ ${originalFullText || '(원본 음성 없음)'}`;
         }
       }
 
-    // 🔴 길이 안전장치
+    // 🔴 길이 안전장치 - 영상 길이에 정확히 맞춤 (TTS가 영상보다 길어지지 않도록)
+    // 🔧 actualCps = cps × 1.15 (TTS rate +15% 감안한 실제 읽기 속도)
+    // 영상 길이 × actualCps = 영상에 정확히 들어가는 카피 글자수
     const cpsForCheck = getCharsPerSecond(targetLang);
-    const maxSafeChars = Math.floor(videoDuration * cpsForCheck * 1.2);
-    const minSafeChars = Math.floor(videoDuration * cpsForCheck * 0.85); // 영상의 85% 이상 채워야 함
+    const actualCpsForCheck = cpsForCheck * 1.15;
+    const maxSafeChars = Math.floor(videoDuration * actualCpsForCheck * 1.0);  // 영상 길이에 정확히 맞춤
+    const minSafeChars = Math.floor(videoDuration * actualCpsForCheck * 0.7);  // 영상의 70% 이상
 
     // (A) 너무 길면 뒤를 잘라냄
     if (adCopy.length > maxSafeChars) {
@@ -5986,51 +6024,163 @@ Continue naturally in the same tone. One sentence per line. No labels.`;
     const protectedLines = outroLineCount; // 마지막 멘트 줄 수만큼 보호
 
     // 🔴 TTS가 영상보다 길면 → 자르지 말고 TTS 속도 높여서 재생성
+    // 🔧 반드시 영상 길이 안에 들어가야 함 (반복 가속)
     if (totalTtsDuration > videoLen + 0.5) {
       const overrun = totalTtsDuration - videoLen;
-      const speedupPercent = Math.min(30, Math.ceil((overrun / videoLen) * 100) + 5);
       console.warn(`[tts] TTS(${totalTtsDuration.toFixed(1)}s)가 영상(${videoLen.toFixed(1)}s)보다 ${overrun.toFixed(1)}초 김`);
-      console.log(`[tts] → 내용 자르지 않고 TTS 속도 +${15 + speedupPercent}%로 재생성`);
       
-      // 모든 TTS 파일 삭제 후 더 빠른 속도로 재생성
-      for (const tl of ttsLines) {
-        try { fs.unlinkSync(tl.path); } catch (e) {}
-      }
-      ttsLines.length = 0;
+      // 🔧 타입캐스트/ElevenLabs는 재생성 대신 ffmpeg로 속도 조절 (edge-tts.exe 불필요)
+      const ttsProviderUsed = (config.ttsProvider || '').toLowerCase();
+      const isTypecastUsed = ttsProviderUsed === 'typecast' && config.typecastVoice && config.typecastApiKey;
+      const isElevenLabsUsed = ttsProviderUsed === 'elevenlabs' && config.elevenLabsVoice && config.elevenLabsApiKey;
+      const useFfmpegSpeedup = isTypecastUsed || isElevenLabsUsed;
       
-      const newRate = `+${15 + speedupPercent}%`;
-      for (let i = 0; i < parsedLines.length; i++) {
-        const pl = parsedLines[i];
-        const rawAudioPath = path.join(jobDir, `product_${i}_raw.mp3`);
-        const lineAudioPath = path.join(jobDir, `product_${i}.mp3`);
-        try {
-          await runCommand(edgeTts, [
-            '--voice', pl.voice,
-            '--rate', newRate,
-            '--text', pl.text,
-            '--write-media', rawAudioPath,
-          ]);
-          // 🔙 레퍼런스 기준 복원
+      if (useFfmpegSpeedup) {
+        // 🔧 정확히 영상 길이에 맞추는 가속 비율 계산 (95% 안전 마진)
+        // 예: TTS 22초 / 영상 17초 = 1.29배로 가속해야 17초 됨
+        // 안전 마진 적용: 영상의 95%로 맞춤 → TTS / (videoLen × 0.95)
+        const targetTtsLen = videoLen * 0.95; // 영상의 95%로 맞춤
+        let speedFactor = totalTtsDuration / targetTtsLen;
+        
+        // ffmpeg atempo는 0.5~100배까지 지원하지만 너무 빠르면 자연스럽지 못함
+        // 하지만 영상 길이 맞추는 게 우선이므로 최대 2배까지 허용
+        speedFactor = Math.min(2.0, Math.max(1.05, speedFactor));
+        
+        console.log(`[tts] → ffmpeg로 속도 ${speedFactor.toFixed(3)}배 조절 (${isTypecastUsed ? '타입캐스트' : 'ElevenLabs'}) - 목표 ${targetTtsLen.toFixed(1)}s`);
+        
+        for (const tl of ttsLines) {
           try {
+            const speedupPath = tl.path.replace(/\.mp3$/, '_fast.mp3');
+            // ffmpeg atempo는 0.5~2.0 범위만 지원하므로 체이닝
+            let atempoFilter;
+            if (speedFactor <= 2.0) {
+              atempoFilter = `atempo=${speedFactor.toFixed(3)}`;
+            } else {
+              // 2배 초과 시 체이닝 (예: 2.5배 = atempo=2.0,atempo=1.25)
+              atempoFilter = `atempo=2.0,atempo=${(speedFactor / 2.0).toFixed(3)}`;
+            }
+            
             await runCommand(ffmpeg, [
-              '-y', '-i', rawAudioPath,
-              '-af', 'silenceremove=start_periods=1:start_duration=0.08:start_threshold=-40dB:stop_periods=-1:stop_duration=0.08:stop_threshold=-40dB',
+              '-y', '-i', tl.path,
+              '-filter:a', atempoFilter,
               '-c:a', 'libmp3lame', '-b:a', '192k',
-              lineAudioPath,
+              speedupPath,
             ]);
-            const trimmedDur = await getMediaDuration(lineAudioPath);
-            if (trimmedDur < 0.2) fs.copyFileSync(rawAudioPath, lineAudioPath);
-          } catch { fs.copyFileSync(rawAudioPath, lineAudioPath); }
-          try { fs.unlinkSync(rawAudioPath); } catch (e) {}
+            // 원본 삭제 후 빠른 버전을 원본 위치로
+            try { fs.unlinkSync(tl.path); } catch (e) {}
+            fs.renameSync(speedupPath, tl.path);
+            tl.duration = await getMediaDuration(tl.path);
+          } catch (e) {
+            console.error('TTS 속도 조절 실패:', e.message);
+          }
+        }
+        
+        // 🔧 1차 가속 후 길이 확인 - 여전히 길면 추가 가속
+        let newTotalDuration = ttsLines.reduce((s, tl) => s + tl.duration, 0);
+        console.log(`[tts] 1차 가속 후: ${newTotalDuration.toFixed(1)}s (목표 ${videoLen.toFixed(1)}s)`);
+        
+        if (newTotalDuration > videoLen + 0.3) {
+          // 추가 가속 필요
+          const extraSpeedFactor = newTotalDuration / (videoLen * 0.95);
+          console.log(`[tts] 🔄 추가 가속 ${extraSpeedFactor.toFixed(3)}배 (여전히 ${(newTotalDuration - videoLen).toFixed(1)}초 김)`);
           
-          const dur = await getMediaDuration(lineAudioPath);
-          ttsLines.push({ path: lineAudioPath, duration: dur, text: pl.text });
-        } catch (e) {
-          console.error('TTS 재생성 실패:', i, e.message);
+          for (const tl of ttsLines) {
+            try {
+              const speedupPath = tl.path.replace(/\.mp3$/, '_fast2.mp3');
+              const atempoFilter = extraSpeedFactor <= 2.0 
+                ? `atempo=${extraSpeedFactor.toFixed(3)}`
+                : `atempo=2.0,atempo=${(extraSpeedFactor / 2.0).toFixed(3)}`;
+              
+              await runCommand(ffmpeg, [
+                '-y', '-i', tl.path,
+                '-filter:a', atempoFilter,
+                '-c:a', 'libmp3lame', '-b:a', '192k',
+                speedupPath,
+              ]);
+              try { fs.unlinkSync(tl.path); } catch (e) {}
+              fs.renameSync(speedupPath, tl.path);
+              tl.duration = await getMediaDuration(tl.path);
+            } catch (e) {
+              console.error('TTS 추가 가속 실패:', e.message);
+            }
+          }
+        }
+      } else {
+        // Edge TTS는 기존처럼 재생성 (속도 파라미터 사용)
+        // 🔧 영상 길이에 정확히 맞추는 rate 계산
+        const targetRate = totalTtsDuration / (videoLen * 0.95);
+        const ratePercent = Math.max(15, Math.ceil((targetRate - 1) * 100) + 5);
+        const cappedRatePercent = Math.min(50, ratePercent); // edge-tts는 최대 +50%
+        console.log(`[tts] → 내용 자르지 않고 TTS 속도 +${cappedRatePercent}%로 재생성 (Edge TTS)`);
+        
+        // 모든 TTS 파일 삭제 후 더 빠른 속도로 재생성
+        for (const tl of ttsLines) {
+          try { fs.unlinkSync(tl.path); } catch (e) {}
+        }
+        ttsLines.length = 0;
+        
+        const newRate = `+${cappedRatePercent}%`;
+        for (let i = 0; i < parsedLines.length; i++) {
+          const pl = parsedLines[i];
+          const rawAudioPath = path.join(jobDir, `product_${i}_raw.mp3`);
+          const lineAudioPath = path.join(jobDir, `product_${i}.mp3`);
+          try {
+            await runCommand(edgeTts, [
+              '--voice', pl.voice,
+              '--rate', newRate,
+              '--text', pl.text,
+              '--write-media', rawAudioPath,
+            ]);
+            // 🔙 레퍼런스 기준 복원
+            try {
+              await runCommand(ffmpeg, [
+                '-y', '-i', rawAudioPath,
+                '-af', 'silenceremove=start_periods=1:start_duration=0.08:start_threshold=-40dB:stop_periods=-1:stop_duration=0.08:stop_threshold=-40dB',
+                '-c:a', 'libmp3lame', '-b:a', '192k',
+                lineAudioPath,
+              ]);
+              const trimmedDur = await getMediaDuration(lineAudioPath);
+              if (trimmedDur < 0.2) fs.copyFileSync(rawAudioPath, lineAudioPath);
+            } catch { fs.copyFileSync(rawAudioPath, lineAudioPath); }
+            try { fs.unlinkSync(rawAudioPath); } catch (e) {}
+            
+            const dur = await getMediaDuration(lineAudioPath);
+            ttsLines.push({ path: lineAudioPath, duration: dur, text: pl.text });
+          } catch (e) {
+            console.error('TTS 재생성 실패:', i, e.message);
+          }
+        }
+        
+        // Edge TTS도 추가 ffmpeg 가속 (한 번 더)
+        let newTotalDuration = ttsLines.reduce((s, tl) => s + tl.duration, 0);
+        if (newTotalDuration > videoLen + 0.3) {
+          const extraSpeedFactor = newTotalDuration / (videoLen * 0.95);
+          console.log(`[tts] 🔄 Edge TTS 추가 ffmpeg 가속 ${extraSpeedFactor.toFixed(3)}배`);
+          
+          for (const tl of ttsLines) {
+            try {
+              const speedupPath = tl.path.replace(/\.mp3$/, '_fast.mp3');
+              const atempoFilter = extraSpeedFactor <= 2.0 
+                ? `atempo=${extraSpeedFactor.toFixed(3)}`
+                : `atempo=2.0,atempo=${(extraSpeedFactor / 2.0).toFixed(3)}`;
+              
+              await runCommand(ffmpeg, [
+                '-y', '-i', tl.path,
+                '-filter:a', atempoFilter,
+                '-c:a', 'libmp3lame', '-b:a', '192k',
+                speedupPath,
+              ]);
+              try { fs.unlinkSync(tl.path); } catch (e) {}
+              fs.renameSync(speedupPath, tl.path);
+              tl.duration = await getMediaDuration(tl.path);
+            } catch (e) {
+              console.error('Edge TTS 추가 가속 실패:', e.message);
+            }
+          }
         }
       }
       totalTtsDuration = ttsLines.reduce((s, tl) => s + tl.duration, 0);
-      console.log(`[tts] 재생성 후: ${totalTtsDuration.toFixed(1)}s`);
+      console.log(`[tts] 최종 TTS 길이: ${totalTtsDuration.toFixed(1)}s (영상 ${videoLen.toFixed(1)}s)`);
     }
 
     const placed = [];
@@ -6772,4 +6922,141 @@ async function generateCoupangDeeplink(productUrl, userLptag, adminApiKeys = nul
   }
 }
 
-module.exports = { processVideo, downloadVideo, transcribeAudio, LANGUAGES, VOICE_CATALOG, SUBTITLE_PRESETS, AVAILABLE_FONTS, SIZE_PRESETS, LLM_PROVIDERS, searchCoupangProducts, generateCoupangDeeplink };
+// ===== 🆕 타입캐스트 미리듣기 =====
+async function typecastPreview(text, voiceId, apiKey) {
+  if (!text) text = '안녕하세요. 타입캐스트 미리듣기 입니다.';
+  if (!voiceId) throw new Error('Voice ID가 없습니다');
+  if (!apiKey) throw new Error('API Token이 없습니다');
+  
+  console.log(`[Typecast Preview] voice_id=${voiceId}, text="${text}"`);
+  
+  try {
+    const response = await axios.post(
+      'https://api.typecast.ai/v1/text-to-speech',
+      {
+        text: text,
+        model: 'ssfm-v30',
+        voice_id: voiceId,
+        prompt: { emotion_type: 'smart' },
+        output: { audio_format: 'mp3', volume: 100 },
+      },
+      {
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+        },
+        responseType: 'arraybuffer',
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 30000,
+      }
+    );
+    
+    const buffer = Buffer.from(response.data);
+    const contentType = response.headers['content-type'] || '';
+    
+    // JSON 응답이면 에러
+    if (contentType.includes('json') || (buffer[0] === 0x7B && buffer[1] === 0x22)) {
+      const jsonText = buffer.toString('utf8');
+      throw new Error('타입캐스트가 mp3 대신 JSON 응답: ' + jsonText.substring(0, 200));
+    }
+    
+    console.log(`[Typecast Preview] 성공 - ${buffer.length} bytes`);
+    
+    // base64로 인코딩해서 반환 (renderer로 보내기 위함)
+    return buffer.toString('base64');
+  } catch (error) {
+    const errMsg = error.response?.data 
+      ? (Buffer.isBuffer(error.response.data) ? error.response.data.toString() : JSON.stringify(error.response.data))
+      : error.message;
+    console.error('[Typecast Preview] 오류:', errMsg);
+    
+    if (error.response?.status === 401) throw new Error('API Token 오류');
+    if (error.response?.status === 403) throw new Error('사용량 초과 또는 권한 없음');
+    if (error.response?.status === 404) throw new Error('Voice ID 오류 (' + voiceId + ')');
+    throw new Error(errMsg);
+  }
+}
+
+// ===== 🆕 ElevenLabs 미리듣기 =====
+async function elevenLabsPreview(text, voiceId, apiKey) {
+  if (!text) text = 'Hello. This is ElevenLabs voice preview.';
+  if (!voiceId) throw new Error('Voice ID가 없습니다');
+  if (!apiKey) throw new Error('API Key가 없습니다');
+  
+  console.log(`[ElevenLabs Preview] voice_id=${voiceId}`);
+  
+  try {
+    const response = await axios.post(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
+      },
+      {
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey
+        },
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      }
+    );
+    
+    const buffer = Buffer.from(response.data);
+    const contentType = response.headers['content-type'] || '';
+    
+    if (contentType.includes('json') || (buffer[0] === 0x7B && buffer[1] === 0x22)) {
+      const jsonText = buffer.toString('utf8');
+      throw new Error('ElevenLabs JSON 응답: ' + jsonText.substring(0, 200));
+    }
+    
+    console.log(`[ElevenLabs Preview] 성공 - ${buffer.length} bytes`);
+    return buffer.toString('base64');
+  } catch (error) {
+    const errMsg = error.response?.data 
+      ? (Buffer.isBuffer(error.response.data) ? error.response.data.toString() : JSON.stringify(error.response.data))
+      : error.message;
+    console.error('[ElevenLabs Preview] 오류:', errMsg);
+    
+    if (error.response?.status === 401) throw new Error('API Key 오류');
+    if (error.response?.status === 422) throw new Error('Voice ID 오류 (' + voiceId + ')');
+    throw new Error(errMsg);
+  }
+}
+
+// ===== 🆕 Edge TTS 미리듣기 =====
+async function edgeTtsPreview(text, voiceId, edgeTtsPath, jobDir) {
+  if (!text) text = '안녕하세요. Edge TTS 미리듣기 입니다.';
+  if (!voiceId) throw new Error('Voice ID가 없습니다');
+  if (!edgeTtsPath) throw new Error('Edge TTS 파일 경로가 없습니다');
+  if (!jobDir) jobDir = require('os').tmpdir();
+  
+  console.log(`[Edge TTS Preview] voice=${voiceId}`);
+  
+  const tempPath = path.join(jobDir, `edge_preview_${Date.now()}.mp3`);
+  
+  try {
+    await runCommand(edgeTtsPath, [
+      '--voice', voiceId,
+      '--text', text,
+      '--write-media', tempPath,
+    ]);
+    
+    const buffer = fs.readFileSync(tempPath);
+    
+    // 임시 파일 삭제
+    try { fs.unlinkSync(tempPath); } catch (e) {}
+    
+    console.log(`[Edge TTS Preview] 성공 - ${buffer.length} bytes`);
+    return buffer.toString('base64');
+  } catch (error) {
+    try { fs.unlinkSync(tempPath); } catch (e) {}
+    console.error('[Edge TTS Preview] 오류:', error.message);
+    throw new Error('Edge TTS 실패: ' + error.message);
+  }
+}
+
+module.exports = { processVideo, downloadVideo, transcribeAudio, LANGUAGES, VOICE_CATALOG, SUBTITLE_PRESETS, AVAILABLE_FONTS, SIZE_PRESETS, LLM_PROVIDERS, searchCoupangProducts, generateCoupangDeeplink, typecastPreview, elevenLabsPreview, edgeTtsPreview };

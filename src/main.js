@@ -3221,19 +3221,41 @@ ipcMain.handle('get-random-topics', () => {
 // ===== 🆕 쿠팡 파트너스 검색/링크 발급 =====
 ipcMain.handle('coupang-search', async (event, payload) => {
   try {
+    console.log('');
+    console.log('========================================');
+    console.log('[coupang-search] 🔍 검색 요청 받음');
+    console.log('========================================');
+    console.log('  keyword:', payload?.keyword);
+    console.log('  limit:', payload?.limit);
+    console.log('  adminApiKeys 받았는가?:', payload?.adminApiKeys ? '✅ 예' : '❌ 아니오');
+    if (payload?.adminApiKeys) {
+      console.log('  adminApiKeys.accessKey:', payload.adminApiKeys.accessKey ? `있음 (${payload.adminApiKeys.accessKey.length}자)` : '❌ 없음');
+      console.log('  adminApiKeys.secretKey:', payload.adminApiKeys.secretKey ? `있음 (${payload.adminApiKeys.secretKey.length}자)` : '❌ 없음');
+    }
+    console.log('========================================');
+    
     const { searchCoupangProducts } = require('./processor');
     const keyword = (payload?.keyword || '').trim();
     const limit = parseInt(payload?.limit) || 20;
     const adminApiKeys = payload?.adminApiKeys || null;
     
     if (!keyword) {
+      console.log('[coupang-search] ❌ 검색어 없음');
       return { success: false, error: '검색어를 입력하세요' };
     }
     
+    console.log('[coupang-search] processor.searchCoupangProducts() 호출...');
     const products = await searchCoupangProducts(keyword, limit, adminApiKeys);
+    console.log(`[coupang-search] ✅ 성공! 상품 ${products.length}개 받음`);
     return { success: true, products };
   } catch (err) {
-    console.error('[coupang-search] 오류:', err.message);
+    console.error('');
+    console.error('========================================');
+    console.error('[coupang-search] ❌ 에러 발생!');
+    console.error('========================================');
+    console.error('  message:', err.message);
+    console.error('  stack:', err.stack);
+    console.error('========================================');
     return { success: false, error: err.message };
   }
 });
@@ -3253,6 +3275,72 @@ ipcMain.handle('coupang-deeplink', async (event, payload) => {
     return { success: true, ...result };
   } catch (err) {
     console.error('[coupang-deeplink] 오류:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ===== 🆕 타입캐스트 미리듣기 =====
+ipcMain.handle('typecast-preview', async (event, payload) => {
+  try {
+    const { typecastPreview } = require('./processor');
+    const voiceId = (payload?.voiceId || '').trim();
+    const apiKey = (payload?.apiKey || '').trim();
+    const text = (payload?.text || '안녕하세요. 타입캐스트 미리듣기 입니다.').trim();
+    
+    if (!voiceId) return { success: false, error: 'Voice ID가 없습니다' };
+    if (!apiKey) return { success: false, error: 'API Token이 없습니다' };
+    
+    console.log('[typecast-preview] 호출:', { voiceId, textLen: text.length });
+    const audioBase64 = await typecastPreview(text, voiceId, apiKey);
+    return { success: true, audioBase64 };
+  } catch (err) {
+    console.error('[typecast-preview] 오류:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ===== 🆕 ElevenLabs 미리듣기 =====
+ipcMain.handle('elevenlabs-preview', async (event, payload) => {
+  try {
+    const { elevenLabsPreview } = require('./processor');
+    const voiceId = (payload?.voiceId || '').trim();
+    const apiKey = (payload?.apiKey || '').trim();
+    const text = (payload?.text || 'Hello. This is ElevenLabs voice preview.').trim();
+    
+    if (!voiceId) return { success: false, error: 'Voice ID가 없습니다' };
+    if (!apiKey) return { success: false, error: 'API Key가 없습니다' };
+    
+    console.log('[elevenlabs-preview] 호출:', { voiceId, textLen: text.length });
+    const audioBase64 = await elevenLabsPreview(text, voiceId, apiKey);
+    return { success: true, audioBase64 };
+  } catch (err) {
+    console.error('[elevenlabs-preview] 오류:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ===== 🆕 Edge TTS 미리듣기 =====
+ipcMain.handle('edge-tts-preview', async (event, payload) => {
+  try {
+    const { edgeTtsPreview } = require('./processor');
+    const voiceId = (payload?.voiceId || '').trim();
+    const text = (payload?.text || '안녕하세요. Edge TTS 미리듣기 입니다.').trim();
+    
+    if (!voiceId) return { success: false, error: 'Voice ID가 없습니다' };
+    
+    // edge-tts.exe 경로 (앱 폴더 기준)
+    const path = require('path');
+    const isPackaged = app.isPackaged;
+    const baseDir = isPackaged ? path.dirname(app.getPath('exe')) : path.join(__dirname, '..');
+    const edgeTtsPath = process.platform === 'win32' 
+      ? path.join(baseDir, 'edge-tts.exe')
+      : path.join(baseDir, 'edge-tts');
+    
+    console.log('[edge-tts-preview] 호출:', { voiceId, edgeTtsPath });
+    const audioBase64 = await edgeTtsPreview(text, voiceId, edgeTtsPath, app.getPath('temp'));
+    return { success: true, audioBase64 };
+  } catch (err) {
+    console.error('[edge-tts-preview] 오류:', err.message);
     return { success: false, error: err.message };
   }
 });

@@ -28,6 +28,12 @@ contextBridge.exposeInMainWorld('api', {
   // 🆕 쿠팡 파트너스 검색/링크 발급
   coupangSearch: (payload) => ipcRenderer.invoke('coupang-search', payload),
   coupangDeeplink: (payload) => ipcRenderer.invoke('coupang-deeplink', payload),
+  // 🆕 타입캐스트 미리듣기
+  typecastPreview: (payload) => ipcRenderer.invoke('typecast-preview', payload),
+  // 🆕 ElevenLabs 미리듣기
+  elevenLabsPreview: (payload) => ipcRenderer.invoke('elevenlabs-preview', payload),
+  // 🆕 Edge TTS 미리듣기
+  edgeTtsPreview: (payload) => ipcRenderer.invoke('edge-tts-preview', payload),
   getVideoDuration: (filePath) => ipcRenderer.invoke('get-video-duration', filePath),
   getUrlVideoDuration: (url) => ipcRenderer.invoke('get-url-video-duration', url),
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
