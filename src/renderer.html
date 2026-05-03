@@ -2209,28 +2209,9 @@
             <textarea class="input" id="generatedScriptEditStep4" placeholder="🎬 영상 URL 입력 후 '대본 생성' 버튼을 눌러주세요!
 
 예시:
-이거 진짜 [[대박]]인데 안 사면 후회함!
-가격이 [[만원도 안 해]]
-지금 [[한정 세일]] 중이니까 빨리!
-
-💡 [[ ]]로 감싼 부분만 강조색으로 표시됩니다" style="min-height:180px; resize:vertical; font-size:13px; line-height:1.8; margin-top:8px;"></textarea>
-            
-            <!-- 🆕 [[ ]] 강조 안내 문구 -->
-            <div style="margin-top:8px; padding:10px 12px; background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.3); border-radius:8px; font-size:12px; line-height:1.7;">
-              <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">✨ 강조 색상 사용법</div>
-              <div style="color:var(--text);">
-                강조하고 싶은 단어를 <code style="background:rgba(249,115,22,0.15); padding:1px 6px; border-radius:4px; font-weight:700; color:var(--accent);">[[단어]]</code>로 감싸면<br>
-                그 부분만 <b style="color:var(--accent);">자막 디자인에서 선택한 강조 색상</b>으로 표시됩니다!
-              </div>
-              <div style="margin-top:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; font-size:11px; color:var(--text-dim); line-height:1.6;">
-                <b style="color:var(--text);">예시:</b><br>
-                이건 얇아서 <code style="background:rgba(249,115,22,0.2); padding:1px 5px; border-radius:3px; color:var(--accent);">[[폰에 딱 붙어]]</code> 걸리적거리지 않아<br>
-                <span style="color:var(--accent);">→ "폰에 딱 붙어" 부분만 강조색!</span>
-              </div>
-              <div style="margin-top:6px; color:var(--text-dim); font-size:11px;">
-                💡 강조색은 다음 단계 <b>"자막 디자인"</b>에서 변경 가능
-              </div>
-            </div>
+이거 진짜 대박인데 안 사면 후회함!
+가격이 만원도 안 해
+지금 한정 세일 중이니까 빨리!" style="min-height:180px; resize:vertical; font-size:13px; line-height:1.8; margin-top:8px;"></textarea>
             
             <!-- 🆕 줄수 표시 - 대본 생성 버튼 위, 왼쪽 정렬 -->
             <div id="scriptLineCountStep4" style="margin-top:8px; padding:6px 12px; background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.2); border-radius:6px; font-size:12px; color:var(--text); text-align:left; display:none;">
@@ -2474,8 +2455,9 @@
                 <!-- 배경 이미지 (🆕 cover로 변경: 9:16 이미지가 꽉 차게) -->
                 <div id="templateBgPreview" style="position:absolute; inset:0; background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
                 
-                <!-- 제목 (드래그 가능) -->
+                <!-- 제목 (드래그 가능) - 쇼핑 쇼츠는 숨김 -->
                 <div id="templateTitlePreview" class="draggable-element" data-drag-type="title" style="
+                  display: none;
                   position: absolute;
                   top: 8%;
                   left: 50%;
@@ -2554,8 +2536,8 @@
                   <div class="hint" style="margin-top:4px;">없으면 검은 배경</div>
                 </div>
                 
-                <!-- 제목 설정 섹션 -->
-                <div style="background:var(--bg-2); border-radius:8px; padding:12px; margin-bottom:12px;">
+                <!-- 제목 설정 섹션 (쇼핑 쇼츠는 숨김, 인물영상용으로 보존) -->
+                <div id="templateTitleSection" style="display:none; background:var(--bg-2); border-radius:8px; padding:12px; margin-bottom:12px;">
                   <div style="font-weight:600; margin-bottom:10px; font-size:12px;">📝 제목 설정</div>
                   
                   <div class="form-row" style="margin-bottom:10px;">
@@ -2824,10 +2806,6 @@
               <label>외곽선 색상</label>
               <div class="color-row" id="borderColorRow"></div>
             </div>
-          </div>
-          <div style="margin-top:14px;">
-            <label>💥 강조 색상 (핵심 문장 자동 강조)</label>
-            <div class="color-row" id="highlightColorRow"></div>
           </div>
         </div>
 
@@ -6151,19 +6129,6 @@
   }
   buildColorRow('fontColorRow', 'customFontColor');
   buildColorRow('borderColorRow', 'customBorderColor');
-  buildColorRow('highlightColorRow', 'customHighlightColor');
-
-  // 강조색 기본값 활성화
-  setTimeout(() => {
-    const hlRow = document.getElementById('highlightColorRow');
-    if (hlRow) {
-      hlRow.querySelectorAll('.color-swatch').forEach(s => {
-        if (s.style.background.includes('ffeb00') || s.style.background === 'rgb(255, 235, 0)') {
-          s.classList.add('active');
-        }
-      });
-    }
-  }, 0);
 
   // ===== 자막 위치 + 미리보기 =====
   let subPosY = 85;
